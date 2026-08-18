@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lazahata encoder smoke</title>
+</head>
+<body>
+  <p>The UI lives in the Next.js app. Run the encoder tests with <code>npm test</code>.</p>
+  <pre id="out">starting…</pre>
+  <script type="module">
+    const out = document.getElementById("out");
+    const lines = [];
+    function log(msg) {
+      lines.push(msg);
+      out.textContent = lines.join("\n");
+    }
+
+    try {
+      const { encodeXthPage, buildXtchContainer } = await import("../src/lib/xtch.ts");
+      log("xtch module loaded");
+
+      const white = new Uint8ClampedArray(8 * 8 * 4).fill(255);
+      const page = encodeXthPage(white, 8, 8);
+      if (page[0] !== 0x58 || page[2] !== 0x48) throw new Error("XTH magic mismatch");
+      const box = buildXtchContainer([page], 8, 8, { title: "T", author: "A" }, []);
+      const magic = String.fromCharCode(box[0], box[1], box[2], box[3]);
+      if (magic !== "XTCH") throw new Error("XTCH magic mismatch: " + magic);
+      log("PASS encoder self-check");
+      document.title = "PASS";
+      document.body.dataset.result = "PASS";
+    } catch (err) {
+      log("FAIL " + (err && err.stack ? err.stack : err));
+      log("Note: this file cannot load TypeScript in a raw browser. Use npm test.");
+      document.title = "FAIL";
+      document.body.dataset.result = "FAIL";
+    }
+  </script>
+</body>
+</html>

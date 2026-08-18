@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import {
+  convertWritingMode,
+  effectiveWritingMode,
+  textLooksVertical,
+} from "../src/lib/detectVertical.ts";
+
+assert.equal(textLooksVertical("body { writing-mode: vertical-rl; }"), true);
+assert.equal(textLooksVertical("html { -epub-writing-mode: vertical-rl }"), true);
+assert.equal(textLooksVertical("-webkit-writing-mode: vertical-lr;"), true);
+assert.equal(textLooksVertical('<meta name="primary-writing-mode" content="vertical-rl"/>'), true);
+assert.equal(textLooksVertical("body { writing-mode: horizontal-tb; }"), false);
+assert.equal(textLooksVertical("page-progression-direction=\"rtl\""), false);
+
+assert.equal(effectiveWritingMode("auto", true), "vertical");
+assert.equal(effectiveWritingMode("auto", false), "horizontal");
+assert.equal(effectiveWritingMode("auto", null), "horizontal");
+assert.equal(effectiveWritingMode("vertical", false), "vertical");
+assert.equal(effectiveWritingMode("horizontal", true), "horizontal");
+assert.equal(convertWritingMode("auto", true), "vertical");
+assert.equal(convertWritingMode("auto", false), "horizontal");
+assert.equal(convertWritingMode("auto", null), "auto");
+assert.equal(convertWritingMode("vertical", false), "vertical");
+
+console.log("detectVertical tests passed");

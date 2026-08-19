@@ -117,7 +117,7 @@ const en = {
   cancel: "Cancel",
   download: "Download",
   footer: "Have fun reading",
-  dropTitle: "Drop EPUB or TXT files here",
+  dropTitle: "Drop EPUB, TXT, or MOBI files here",
   dropHint: "first 20 pages preview · convert & download for the full book",
   queueEmpty: "No books in the queue yet.",
   libFoliate: "Foliate",
@@ -125,7 +125,7 @@ const en = {
   downloadXtch: "Download XTCH",
   remove: "Remove",
   preview: "Preview",
-  previewEmpty: "Drop an EPUB or TXT to preview the first 20 XTCH pages.",
+  previewEmpty: "Drop an EPUB, TXT, or MOBI to preview the first 20 XTCH pages.",
   prev: "Prev",
   next: "Next",
   output: "Output",
@@ -180,10 +180,10 @@ const en = {
   languageDesc: "Follows the browser unless you pick one",
   languageAuto: "Auto",
   loadingEngine: "Loading conversion engine…",
-  engineReady: "Engine ready. Drop an EPUB or TXT to convert.",
+  engineReady: "Engine ready. Drop an EPUB, TXT, or MOBI to convert.",
   engineLoadFailed: "Could not load the conversion engine. Check your network and refresh.",
   noBook: "No book loaded",
-  dropToPreview: "Drop an EPUB or TXT to convert and preview XTCH",
+  dropToPreview: "Drop an EPUB, TXT, or MOBI to convert and preview XTCH",
   previewPrefix: "Preview · ",
   pageOf: "Page {current} / {total}",
   previewFirstPages: "Preview · first {n} pages",
@@ -194,8 +194,8 @@ const en = {
   waitingReconvert: "Waiting to reconvert…",
   detectingWriting: "Detecting writing…",
   writingSize: "{mode} · {size}",
-  formatComing: "{names} support is in progress. EPUB and TXT for now.",
-  unsupportedType: "Unsupported file type. Drop an EPUB or TXT for now.",
+  formatComing: "{names} support is in progress.",
+  unsupportedType: "Unsupported file type. Drop EPUB, TXT, or MOBI.",
   buildingPreview: "Building preview…",
   convertingFull: "Converting full book…",
   previewing: "Previewing…",
@@ -238,6 +238,7 @@ const en = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -255,7 +256,7 @@ const ja: Record<MessageKey, string> = {
   cancel: "キャンセル",
   download: "ダウンロード",
   footer: "楽しい読書を",
-  dropTitle: "EPUB または TXT をここにドロップ",
+  dropTitle: "EPUB、TXT、MOBI をここにドロップ",
   dropHint: "先頭 20 ページをプレビュー · 全書は変換してダウンロード",
   queueEmpty: "キューに本はまだありません。",
   libFoliate: "Foliate",
@@ -332,8 +333,8 @@ const ja: Record<MessageKey, string> = {
   waitingReconvert: "再変換待ち…",
   detectingWriting: "組方向を判定中…",
   writingSize: "{mode} · {size}",
-  formatComing: "{names} は対応中です。現在は EPUB と TXT です。",
-  unsupportedType: "未対応のファイルです。EPUB または TXT をドロップしてください。",
+  formatComing: "{names} は対応中です。",
+  unsupportedType: "未対応のファイルです。EPUB、TXT、または MOBI をドロップしてください。",
   buildingPreview: "プレビューを作成中…",
   convertingFull: "全書を変換中…",
   previewing: "プレビュー中…",
@@ -376,6 +377,7 @@ const ja: Record<MessageKey, string> = {
   encodingDesc: "ファイルから判定します。文字化けしたら選び直してください。",
   encodingAuto: "自動",
   encodingThisFile: "このファイル · {name}",
+  mobiDrm: "この Kindle ファイルは暗号化されているため開けません。",
 };
 
 const zh: Record<MessageKey, string> = {
@@ -389,7 +391,7 @@ const zh: Record<MessageKey, string> = {
   cancel: "取消",
   download: "下载",
   footer: "阅读愉快",
-  dropTitle: "将 EPUB 或 TXT 拖放到此处",
+  dropTitle: "将 EPUB、TXT 或 MOBI 拖放到此处",
   dropHint: "预览前 20 页 · 全书请转换并下载",
   queueEmpty: "队列中还没有书。",
   libFoliate: "Foliate",
@@ -466,8 +468,8 @@ const zh: Record<MessageKey, string> = {
   waitingReconvert: "等待重新转换…",
   detectingWriting: "正在检测排版方向…",
   writingSize: "{mode} · {size}",
-  formatComing: "{names} 支持中。目前支持 EPUB 和 TXT。",
-  unsupportedType: "不支持的文件类型。请拖放 EPUB 或 TXT。",
+  formatComing: "{names} 支持中。",
+  unsupportedType: "不支持的文件类型。请拖放 EPUB、TXT 或 MOBI。",
   buildingPreview: "正在生成预览…",
   convertingFull: "正在转换全书…",
   previewing: "预览中…",
@@ -510,6 +512,7 @@ const zh: Record<MessageKey, string> = {
   encodingDesc: "已从文件检测。乱码时请改选。",
   encodingAuto: "自动",
   encodingThisFile: "本文件 · {name}",
+  mobiDrm: "此 Kindle 文件已加密，无法打开。",
 };
 
 const zhHant: Record<MessageKey, string> = {
@@ -523,7 +526,7 @@ const zhHant: Record<MessageKey, string> = {
   cancel: "取消",
   download: "下載",
   footer: "閱讀愉快",
-  dropTitle: "將 EPUB 或 TXT 拖放到此處",
+  dropTitle: "將 EPUB、TXT 或 MOBI 拖放到此處",
   dropHint: "預覽前 20 頁 · 全書請轉換並下載",
   queueEmpty: "佇列中還沒有書。",
   libFoliate: "Foliate",
@@ -600,8 +603,8 @@ const zhHant: Record<MessageKey, string> = {
   waitingReconvert: "等待重新轉換…",
   detectingWriting: "正在偵測排版方向…",
   writingSize: "{mode} · {size}",
-  formatComing: "{names} 支援中。目前支援 EPUB 和 TXT。",
-  unsupportedType: "不支援的檔案類型。請拖放 EPUB 或 TXT。",
+  formatComing: "{names} 支援中。",
+  unsupportedType: "不支援的檔案類型。請拖放 EPUB、TXT 或 MOBI。",
   buildingPreview: "正在產生預覽…",
   convertingFull: "正在轉換全書…",
   previewing: "預覽中…",
@@ -644,6 +647,7 @@ const zhHant: Record<MessageKey, string> = {
   encodingDesc: "已從檔案偵測。亂碼時請改選。",
   encodingAuto: "自動",
   encodingThisFile: "本檔 · {name}",
+  mobiDrm: "此 Kindle 檔案已加密，無法開啟。",
 };
 
 const ko: Record<MessageKey, string> = {
@@ -657,7 +661,7 @@ const ko: Record<MessageKey, string> = {
   cancel: "취소",
   download: "다운로드",
   footer: "즐거운 독서 되세요",
-  dropTitle: "EPUB 또는 TXT을 여기에 놓으세요",
+  dropTitle: "EPUB, TXT 또는 MOBI을 여기에 놓으세요",
   dropHint: "처음 20쪽 미리보기 · 전체는 변환 후 다운로드",
   queueEmpty: "대기열에 책이 없습니다.",
   libFoliate: "Foliate",
@@ -734,8 +738,8 @@ const ko: Record<MessageKey, string> = {
   waitingReconvert: "다시 변환 대기 중…",
   detectingWriting: "쓰기 방향 감지 중…",
   writingSize: "{mode} · {size}",
-  formatComing: "{names} 지원 중입니다. 지금은 EPUB과 TXT입니다.",
-  unsupportedType: "지원하지 않는 파일입니다. EPUB 또는 TXT을 놓아 주세요.",
+  formatComing: "{names} 지원 중입니다.",
+  unsupportedType: "지원하지 않는 파일입니다. EPUB, TXT 또는 MOBI을 놓아 주세요.",
   buildingPreview: "미리보기 만드는 중…",
   convertingFull: "책 전체를 변환 중…",
   previewing: "미리보는 중…",
@@ -778,6 +782,7 @@ const ko: Record<MessageKey, string> = {
   encodingDesc: "파일에서 감지합니다. 글자가 깨지면 바꿔 주세요.",
   encodingAuto: "자동",
   encodingThisFile: "이 파일 · {name}",
+  mobiDrm: "이 Kindle 파일은 암호화되어 열 수 없습니다.",
 };
 
 const dictionaries: Record<Locale, Record<MessageKey, string>> = {

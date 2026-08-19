@@ -134,6 +134,7 @@ export const bn: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const ur: Dict = {
@@ -268,6 +269,7 @@ export const ur: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const mr: Dict = {
@@ -402,6 +404,7 @@ export const mr: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const te: Dict = {
@@ -536,6 +539,7 @@ export const te: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const sw: Dict = {
@@ -670,6 +674,7 @@ export const sw: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const ha: Dict = {
@@ -804,6 +809,7 @@ export const ha: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const pa: Dict = {
@@ -938,6 +944,7 @@ export const pa: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const tl: Dict = {
@@ -1072,6 +1079,7 @@ export const tl: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const ta: Dict = {
@@ -1206,6 +1214,7 @@ export const ta: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const fa: Dict = {
@@ -1340,6 +1349,7 @@ export const fa: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const am: Dict = {
@@ -1474,6 +1484,7 @@ export const am: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };
 
 export const gu: Dict = {
@@ -1608,4 +1619,5 @@ export const gu: Dict = {
   encodingDesc: "Detected from the file. Change it if the text looks wrong.",
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
+  mobiDrm: "This Kindle file is encrypted and cannot be opened.",
 };

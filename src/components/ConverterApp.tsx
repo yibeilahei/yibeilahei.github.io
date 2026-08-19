@@ -5,7 +5,7 @@ import {
   acceptAttribute,
   comingSoonFor,
   listConverters,
-  matchConverter,
+  matchConverterAsync,
 } from "@/lib/converters";
 import { downloadBytes, downloadJobs } from "@/lib/download";
 import { ensureRenderer } from "@/lib/engine";
@@ -312,12 +312,13 @@ export function ConverterApp() {
       const files = Array.from(fileList);
       if (!files.length) return;
 
+      void (async () => {
       const skippedSoon: string[] = [];
       const skippedOther: string[] = [];
       const nextJobs: Job[] = [];
 
       for (const file of files) {
-        const converter = matchConverter(file);
+        const converter = await matchConverterAsync(file);
         if (converter) {
           const exists = jobsRef.current.some(
             (j) => j.file.name === file.name && j.file.size === file.size,
@@ -369,8 +370,14 @@ export function ConverterApp() {
                   script: sniff.script,
                   encoding: sniff.encoding ?? null,
                 };
-              } catch {
-                return { id: job.id, vertical: false, script: null, encoding: null as string | null };
+              } catch (err) {
+                return {
+                  id: job.id,
+                  vertical: false,
+                  script: null,
+                  encoding: null as string | null,
+                  error: err instanceof Error ? err.message : t("convertFailed"),
+                };
               }
             }),
           );
@@ -379,6 +386,15 @@ export function ConverterApp() {
             const next = prev.map((j) => {
               if (!byId.has(j.id) || j.detectedVertical != null) return j;
               const hit = byId.get(j.id);
+              if (hit && "error" in hit && hit.error) {
+                return {
+                  ...j,
+                  status: "error" as const,
+                  error: hit.error,
+                  message: hit.error,
+                  detectedVertical: false,
+                };
+              }
               const vertical = hit?.vertical === true;
               return {
                 ...j,
@@ -408,6 +424,7 @@ export function ConverterApp() {
       } else if (skippedOther.length) {
         showToast(t("unsupportedType"), "warn");
       }
+      })();
     },
     [activeId, showToast],
   );
@@ -671,7 +688,6 @@ export function ConverterApp() {
               {c.label}
             </span>
           ))}
-          <span className="chip soon">{t("chipComing", { name: "MOBI" }, locale)}</span>
         </div>
       </header>
 

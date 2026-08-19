@@ -69,12 +69,65 @@ header.hero h1 {
 }
 
 .lang-picker {
+  position: relative;
   flex-shrink: 0;
 }
 
-.lang-picker .field {
-  max-width: none;
-  min-width: 8.5em;
+.lang-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-color, #d0d7de);
+  border-radius: 6px;
+  background: var(--card-bg, #fff);
+  color: var(--title-color, inherit);
+  cursor: pointer;
+}
+
+.lang-picker-btn:hover {
+  background: var(--accent-color, #f0f0f0);
+  opacity: 0.85;
+}
+
+.lang-picker-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 12em;
+  max-height: 20em;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #d0d7de);
+  border-radius: 8px;
+  box-shadow: var(--shadow, 0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.lang-picker-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.lang-picker-item:hover {
+  background: var(--accent-color, #f0f0f0);
+}
+
+.lang-picker-item.active {
+  font-weight: 700;
 }
 
 .visually-hidden {
@@ -137,9 +190,6 @@ header.hero h1 {
   .hero-top {
     flex-direction: column;
     align-items: stretch;
-  }
-  .lang-picker .field {
-    width: 100%;
   }
 }
 

@@ -22,17 +22,16 @@ import { convertWritingMode, isVerticalEpub } from "@/lib/detectVertical";
 import { detectScriptFromEpub, pickUsedFontFamily } from "@/lib/fonts";
 import {
   applyDocumentLocale,
-  LOCALE_OPTIONS,
   resolveLocale,
   setLocale,
   t,
-  type LocalePref,
 } from "@/lib/i18n";
 import { decodeXthPage, parseXtch, type XtchBook } from "@/lib/xtch";
 import type { ConvertResult, Job, PersistSettings, ToastState, WritingMode } from "@/lib/types";
 
 const PREVIEW_PAGES = 20;
 import { DropZone } from "./DropZone";
+import { LanguagePicker } from "./LanguagePicker";
 import { Preview } from "./Preview";
 import { Queue } from "./Queue";
 import { SettingsPanel } from "./SettingsPanel";
@@ -624,21 +623,11 @@ export function ConverterApp() {
       <header className="hero">
         <div className="hero-top">
           <h1>lazahata</h1>
-          <label className="lang-picker">
-            <span className="visually-hidden">{t("language", undefined, locale)}</span>
-            <select
-              className="field"
-              value={settings.locale}
-              aria-label={t("language", undefined, locale)}
-              onChange={(e) => updateSettings({ locale: e.target.value as LocalePref })}
-            >
-              {LOCALE_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.id === "auto" ? t("languageAuto", undefined, locale) : opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <LanguagePicker
+            value={settings.locale}
+            locale={locale}
+            onChange={(next) => updateSettings({ locale: next })}
+          />
         </div>
         <p className="lede">
           {t("ledePrefix", undefined, locale)}

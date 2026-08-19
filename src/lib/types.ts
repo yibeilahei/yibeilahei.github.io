@@ -161,12 +161,19 @@ export type BookSession = {
   usedFontFamily?: string;
 };
 
+export type AdapterSniff = {
+  markup: string;
+  script: ScriptId | null;
+  encoding?: string | null;
+};
+
 export type Converter = {
   id: string;
   label: string;
   extensions: string[];
   mimeTypes?: string[];
   accepts(file: File): boolean;
+  sniff(file: File): Promise<AdapterSniff>;
   load(
     file: File,
     settings: ConvertSettings,

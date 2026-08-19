@@ -3,6 +3,7 @@ import {
   convertWritingMode,
   detectedVerticalFromSample,
   effectiveWritingMode,
+  pagerKind,
   textLooksVertical,
 } from "../src/lib/detectVertical.ts";
 
@@ -28,5 +29,12 @@ assert.equal(convertWritingMode("auto", true), "vertical");
 assert.equal(convertWritingMode("auto", false), "horizontal");
 assert.equal(convertWritingMode("auto", null), "auto");
 assert.equal(convertWritingMode("vertical", false), "vertical");
+
+assert.equal(pagerKind("auto", true, "epub"), "vertical");
+assert.equal(pagerKind("auto", false, "epub"), "crengine");
+assert.equal(pagerKind("auto", false, "txt"), "horizontal");
+assert.equal(pagerKind("vertical", false, "txt"), "vertical");
+assert.equal(pagerKind("horizontal", true, "txt"), "horizontal");
+assert.equal(pagerKind("auto", null, "txt"), "horizontal");
 
 console.log("detectVertical tests passed");

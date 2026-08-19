@@ -18,9 +18,9 @@ import {
   toConvertSettings,
   uid,
 } from "@/lib/settings";
-import { convertWritingMode, isVerticalEpub } from "@/lib/detectVertical";
-import { detectScript, detectScriptFromEpub, pickUsedFontFamily } from "@/lib/fonts";
-import { readTxtFile, sniffTxt, type TxtEncodingId } from "@/lib/txt";
+import { convertWritingMode, detectedVerticalFromSample } from "@/lib/detectVertical";
+import { detectScript, pickUsedFontFamily } from "@/lib/fonts";
+import { readTxtFile, type TxtEncodingId } from "@/lib/txt";
 import {
   applyDocumentLocale,
   resolveLocale,
@@ -362,20 +362,13 @@ export function ConverterApp() {
           const detected = await Promise.all(
             nextJobs.map(async (job) => {
               try {
-                if (job.converter.id === "txt") {
-                  const sniff = await sniffTxt(job.file);
-                  return {
-                    id: job.id,
-                    vertical: sniff.vertical,
-                    script: sniff.script,
-                    encoding: sniff.encoding,
-                  };
-                }
-                const [vertical, script] = await Promise.all([
-                  isVerticalEpub(job.file),
-                  detectScriptFromEpub(job.file),
-                ]);
-                return { id: job.id, vertical, script, encoding: null as string | null };
+                const sniff = await job.converter.sniff(job.file);
+                return {
+                  id: job.id,
+                  vertical: detectedVerticalFromSample(sniff.markup),
+                  script: sniff.script,
+                  encoding: sniff.encoding ?? null,
+                };
               } catch {
                 return { id: job.id, vertical: false, script: null, encoding: null as string | null };
               }

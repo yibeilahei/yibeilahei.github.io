@@ -1,11 +1,11 @@
 /**
  * Format registry. EPUB and TXT are wired.
- * TXT uses the H/V pagers. Do not feed TXT to CREngine.
+ * Auto is markup sample → textLooksVertical. Do not feed TXT to CREngine.
  */
 
 import { encodeXthPage, buildXtchContainer, outputNameFromSource } from "./xtch";
 import { ensureRenderer, applyRenderSettings } from "./engine";
-import { resolveLayoutEngine } from "./detectVertical";
+import { detectedVerticalFromSample, pagerKind, sampleEpubMarkup } from "./detectVertical";
 import { detectScriptFromEpub } from "./fonts";
 import { t } from "./i18n";
 import type {
@@ -70,10 +70,23 @@ const EpubConverter: Converter = {
     return /\.epub$/i.test(file.name) || file.type === "application/epub+zip";
   },
 
+  async sniff(file) {
+    const [markup, script] = await Promise.all([
+      sampleEpubMarkup(file),
+      detectScriptFromEpub(file),
+    ]);
+    return { markup, script, encoding: null };
+  },
+
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
     const { w, h } = settings.device;
-    const layout = await resolveLayoutEngine(file, settings.writingMode);
-    if (layout.engine === "foliate") {
+    let mode = settings.writingMode;
+    if (mode === "auto") {
+      const sniff = await this.sniff(file);
+      mode = detectedVerticalFromSample(sniff.markup) ? "vertical" : "horizontal";
+    }
+    const layout = pagerKind(mode, null, this.id);
+    if (layout === "vertical") {
       if (onStatus) onStatus(t("verticalFoliate"));
       const [{ createVerticalPager }, { makeBook }] = await Promise.all([
         import("./vertical"),
@@ -212,13 +225,19 @@ const TxtConverter: Converter = {
     return /\.txt$/i.test(file.name) || file.type === "text/plain";
   },
 
+  async sniff(file) {
+    const { sniffTxt } = await import("./txt");
+    const sniff = await sniffTxt(file);
+    return { markup: "", script: sniff.script, encoding: sniff.encoding };
+  },
+
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
     const { w, h } = settings.device;
     if (onStatus) onStatus(t("buildingPreview"));
     const { bookFromTxt } = await import("./txt");
     const book = await bookFromTxt(file, settings.txtEncoding || "auto");
     const titleFallback = file.name.replace(/\.txt$/i, "");
-    if (settings.writingMode === "vertical") {
+    if (pagerKind(settings.writingMode, null, this.id) === "vertical") {
       const { createVerticalPager } = await import("./vertical");
       const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
         maxPages: opts?.maxPages,

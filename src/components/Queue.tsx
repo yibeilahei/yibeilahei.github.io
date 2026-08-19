@@ -1,6 +1,6 @@
 "use client";
 
-import { effectiveWritingMode } from "@/lib/detectVertical";
+import { effectiveWritingMode, pagerKind } from "@/lib/detectVertical";
 import { pickUsedFontFamily } from "@/lib/fonts";
 import { t, type Locale } from "@/lib/i18n";
 import type { Job, LayoutLib, PersistSettings } from "@/lib/types";
@@ -19,10 +19,8 @@ type Props = {
 function predictedEngine(job: Job): LayoutLib | null {
   if (job.engine) return job.engine;
   if (job.writingMode === "auto" && job.detectedVertical == null) return null;
-  if (job.converter.id === "txt") return "foliate";
-  return effectiveWritingMode(job.writingMode, job.detectedVertical) === "vertical"
-    ? "foliate"
-    : "crengine";
+  const kind = pagerKind(job.writingMode, job.detectedVertical, job.converter.id);
+  return kind === "crengine" ? "crengine" : "foliate";
 }
 
 export function Queue({

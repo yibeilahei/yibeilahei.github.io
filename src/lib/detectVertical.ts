@@ -6,7 +6,7 @@
  * - TXT and CBZ have no markup signal → pass an empty sample → horizontal
  * - `page-progression-direction=rtl` alone is not enough (manga is often 横書き)
  *
- * EPUB still sniffs the zip (`isVerticalEpub`).
+ * Adapters supply a markup/CSS sample. Empty sample (TXT) → horizontal.
  * Horizontal EPUB still maps to CREngine.
  */
 
@@ -30,7 +30,8 @@ export function detectedVerticalFromSample(sample: string | null | undefined): b
   return Boolean(sample && textLooksVertical(sample));
 }
 
-export async function isVerticalEpub(file: File): Promise<boolean> {
+/** EPUB zip CSS/HTML sample. Stops at the first 縦書き hit. */
+export async function sampleEpubMarkup(file: File): Promise<string> {
   const zip = await JSZip.loadAsync(file);
   const names = Object.keys(zip.files);
   for (const name of names) {
@@ -38,9 +39,13 @@ export async function isVerticalEpub(file: File): Promise<boolean> {
     if (entry.dir) continue;
     if (!/\.(css|xhtml|html|htm|opf|xml)$/i.test(name)) continue;
     const text = await entry.async("string");
-    if (textLooksVertical(text)) return true;
+    if (textLooksVertical(text)) return text;
   }
-  return false;
+  return "";
+}
+
+export async function isVerticalEpub(file: File): Promise<boolean> {
+  return detectedVerticalFromSample(await sampleEpubMarkup(file));
 }
 
 export type LayoutEngine = "foliate" | "crengine";
@@ -62,6 +67,22 @@ export function convertWritingMode(
   if (writingMode !== "auto") return writingMode;
   if (detectedVertical == null) return "auto";
   return detectedVertical ? "vertical" : "horizontal";
+}
+
+/**
+ * Auto or override → which pager.
+ * Vertical is always the 縦書き pager. Horizontal EPUB stays CREngine;
+ * other formats use the 横書き pager. Do not send TXT to CREngine.
+ */
+export function pagerKind(
+  writingMode: WritingMode,
+  detectedVertical: boolean | null,
+  format: string,
+): "vertical" | "horizontal" | "crengine" {
+  const axis = effectiveWritingMode(writingMode, detectedVertical);
+  if (axis === "vertical") return "vertical";
+  if (format === "epub") return "crengine";
+  return "horizontal";
 }
 
 /** EPUB only: vertical → Foliate pager, horizontal → CREngine. */

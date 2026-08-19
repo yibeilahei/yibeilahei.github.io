@@ -135,6 +135,9 @@ export const bn: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const ur: Dict = {
@@ -270,6 +273,9 @@ export const ur: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const mr: Dict = {
@@ -405,6 +411,9 @@ export const mr: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const te: Dict = {
@@ -540,6 +549,9 @@ export const te: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const sw: Dict = {
@@ -675,6 +687,9 @@ export const sw: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const ha: Dict = {
@@ -810,6 +825,9 @@ export const ha: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const pa: Dict = {
@@ -945,6 +963,9 @@ export const pa: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const tl: Dict = {
@@ -1080,6 +1101,9 @@ export const tl: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const ta: Dict = {
@@ -1215,6 +1239,9 @@ export const ta: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const fa: Dict = {
@@ -1350,6 +1377,9 @@ export const fa: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const am: Dict = {
@@ -1485,6 +1515,9 @@ export const am: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };
 
 export const gu: Dict = {
@@ -1620,4 +1653,7 @@ export const gu: Dict = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 };

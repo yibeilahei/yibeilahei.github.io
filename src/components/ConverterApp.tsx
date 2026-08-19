@@ -126,18 +126,22 @@ export function ConverterApp() {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (!settings.epubCrengine) {
+      if (!xtchRef.current) setStatus(t("engineReady", undefined, locale), "ready");
+      return;
+    }
     const s = toConvertSettings(settingsRef.current);
     ensureRenderer(s.device.w, s.device.h, setStatus)
       .then(() => {
         if (!xtchRef.current) {
-          setStatus(t("engineReady"), "ready");
+          setStatus(t("engineReady", undefined, locale), "ready");
         }
       })
       .catch((err) => {
         console.error(err);
-        setStatus(t("engineLoadFailed"), "error");
+        setStatus(t("engineLoadFailed", undefined, locale), "error");
       });
-  }, [hydrated, setStatus]);
+  }, [hydrated, settings.epubCrengine, locale, setStatus]);
 
   const renderPreviewPage = useCallback(() => {
     const book = xtchRef.current;

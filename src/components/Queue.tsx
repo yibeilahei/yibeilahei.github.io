@@ -16,10 +16,10 @@ type Props = {
   settings: PersistSettings;
 };
 
-function predictedEngine(job: Job): LayoutLib | null {
+function predictedEngine(job: Job, epubCrengine: boolean): LayoutLib | null {
   if (job.engine) return job.engine;
   if (job.writingMode === "auto" && job.detectedVertical == null) return null;
-  const kind = pagerKind(job.writingMode, job.detectedVertical, job.converter.id);
+  const kind = pagerKind(job.writingMode, job.detectedVertical, job.converter.id, epubCrengine);
   return kind === "crengine" ? "crengine" : "foliate";
 }
 
@@ -54,7 +54,7 @@ export function Queue({
           fontSize: settings.fontSize,
           lineHeight: settings.lineHeight,
         };
-        const engine = predictedEngine(job);
+        const engine = predictedEngine(job, settings.epubCrengine !== false);
         const writing =
           job.writingMode === "auto" && job.detectedVertical == null
             ? "…"

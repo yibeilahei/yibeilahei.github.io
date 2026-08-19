@@ -17,16 +17,20 @@ export const DEFAULT_SETTINGS: PersistSettings = {
   readDirection: 0,
   renameFromTitle: false,
   locale: "auto",
+  epubCrengine: true,
 };
 
 export function loadSettings(): PersistSettings {
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null") || {};
     delete saved.fontId;
+    const epubCrengine = saved._epubCrengineV2 ? Boolean(saved.epubCrengine) : true;
+    delete saved._epubCrengineV2;
     return {
       ...DEFAULT_SETTINGS,
       ...saved,
       locale: normalizeLocalePref(saved.locale),
+      epubCrengine,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
@@ -35,7 +39,7 @@ export function loadSettings(): PersistSettings {
 
 export function saveSettings(settings: PersistSettings) {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, _epubCrengineV2: true }));
   } catch {
     /* ignore */
   }

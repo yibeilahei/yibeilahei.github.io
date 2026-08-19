@@ -3,11 +3,11 @@
  *
  * - `textLooksVertical(sample)` → vertical, else horizontal
  * - User override always wins (`effectiveWritingMode`)
- * - TXT and CBZ have no markup signal → pass an empty sample → horizontal
+ * - TXT has no markup signal → pass an empty sample → horizontal
  * - `page-progression-direction=rtl` alone is not enough (manga is often 横書き)
  *
  * Adapters supply a markup/CSS sample. Empty sample (TXT) → horizontal.
- * Horizontal EPUB still maps to CREngine.
+ * Horizontal EPUB uses CREngine unless `epubCrengine` is off.
  */
 
 import JSZip from "jszip";
@@ -23,7 +23,7 @@ export function textLooksVertical(text: string): boolean {
 
 /**
  * Auto from a markup/CSS sample. Missing/empty sample → horizontal
- * (TXT, CBZ, or a failed sniff). Does not look at language, glyphs,
+ * (TXT or a failed sniff). Does not look at language, glyphs,
  * filename, or page-progression-direction.
  */
 export function detectedVerticalFromSample(sample: string | null | undefined): boolean {
@@ -71,21 +71,23 @@ export function convertWritingMode(
 
 /**
  * Auto or override → which pager.
- * Vertical is always the 縦書き pager. Horizontal EPUB stays CREngine;
- * other formats use the 横書き pager. Do not send TXT to CREngine.
+ * Vertical is always the 縦書き pager. Horizontal EPUB uses CREngine
+ * unless `epubCrengine` is false (横書き pager). Do not send TXT / MOBI /
+ * FB2 to CREngine.
  */
 export function pagerKind(
   writingMode: WritingMode,
   detectedVertical: boolean | null,
   format: string,
+  epubCrengine = true,
 ): "vertical" | "horizontal" | "crengine" {
   const axis = effectiveWritingMode(writingMode, detectedVertical);
   if (axis === "vertical") return "vertical";
-  if (format === "epub") return "crengine";
+  if (format === "epub" && epubCrengine) return "crengine";
   return "horizontal";
 }
 
-/** EPUB only: vertical → Foliate pager, horizontal → CREngine. */
+/** EPUB only: vertical → Foliate pager, horizontal → CREngine by default. */
 export async function resolveLayoutEngine(
   file: File,
   writingMode: string,

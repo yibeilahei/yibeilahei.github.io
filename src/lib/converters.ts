@@ -9,6 +9,7 @@ import { detectedVerticalFromSample, pagerKind, sampleEpubMarkup } from "./detec
 import { detectScriptFromEpub } from "./fonts";
 import { t } from "./i18n";
 import type {
+  AdapterSniff,
   Book,
   BookSession,
   Converter,
@@ -88,12 +89,13 @@ const EpubConverter: Converter = {
 
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
     const { w, h } = settings.device;
+    let sniff: AdapterSniff | null = null;
     let mode = settings.writingMode;
     if (mode === "auto") {
-      const sniff = await this.sniff(file);
+      sniff = await this.sniff(file);
       mode = detectedVerticalFromSample(sniff.markup) ? "vertical" : "horizontal";
     }
-    const layout = pagerKind(mode, null, this.id);
+    const layout = pagerKind(mode, null, this.id, settings.epubCrengine !== false);
     if (layout === "vertical") {
       if (onStatus) onStatus(t("verticalFoliate"));
       const [{ createVerticalPager }, { makeBook }] = await Promise.all([
@@ -125,7 +127,39 @@ const EpubConverter: Converter = {
       };
     }
 
-    const detectedScript = await detectScriptFromEpub(file);
+    if (layout === "horizontal") {
+      if (onStatus) onStatus(t("horizontalFoliate"));
+      const [{ createHorizontalPager }, { makeBook }] = await Promise.all([
+        import("./horizontal"),
+        import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<Book> }>,
+      ]);
+      const book = await makeBook(file);
+      if (!sniff) sniff = await this.sniff(file);
+      if (sniff.script) book.script = sniff.script;
+      const horizontal = await createHorizontalPager(
+        book,
+        { ...settings, writingMode: "horizontal" },
+        onStatus,
+        {
+          maxPages: opts?.maxPages,
+          titleFallback: file.name.replace(/\.epub$/i, ""),
+        },
+      );
+      return {
+        kind: "horizontal" as const,
+        pager: horizontal.pager,
+        pageCount: horizontal.pageCount,
+        info: horizontal.info,
+        toc: horizontal.toc,
+        width: w,
+        height: h,
+        converter: this,
+        truncated: horizontal.truncated,
+        usedFontFamily: horizontal.usedFontFamily,
+      };
+    }
+
+    const detectedScript = sniff?.script ?? (await detectScriptFromEpub(file));
     const { module, renderer, usedFontFamily, fallbackFamily } = await ensureRenderer(
       w,
       h,
@@ -170,9 +204,7 @@ const EpubConverter: Converter = {
   },
 
   async renderPage(session: BookSession, pageIndex: number) {
-    if (session.kind === "vertical" && session.pager) {
-      return session.pager.renderPage(pageIndex);
-    }
+    if (session.pager) return session.pager.renderPage(pageIndex);
     if (!session.renderer) throw new Error(t("rendererNotReady"));
     session.renderer.goToPage(pageIndex);
     session.renderer.renderCurrentPage();
@@ -216,7 +248,7 @@ const EpubConverter: Converter = {
       info: session.info,
       pageCount: limit,
       partial,
-      engine: session.kind === "vertical" ? "foliate" : "crengine",
+      engine: session.kind === "crengine" ? "crengine" : "foliate",
       usedFontFamily: session.usedFontFamily,
     };
   },

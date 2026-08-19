@@ -4,7 +4,7 @@
  * Adapters turn bytes into a Book. Auto (or the user override) picks a
  * pager by writing mode, not file type. XTCH encoding does not change.
  *
- * Today only EPUB is wired. CREngine remains the horizontal-EPUB specialist.
+ * EPUB / TXT / MOBI / FB2 are wired. Horizontal EPUB defaults to CREngine.
  */
 
 import type { CREngineModule, EpubRenderer } from "./engine";
@@ -38,7 +38,7 @@ export type BookSection = {
 /**
  * Shared book after an adapter unpacks bytes: sections, HTML `load()`,
  * metadata, toc, script. Foliate `makeBook` already matches this for EPUB
- * (and later MOBI / FB2 / CBZ). `script` is attached from `detectScript` on
+ * (and later MOBI / FB2). `script` is attached from `detectScript` on
  * text/language — it is not Auto.
  */
 export type Book = {
@@ -74,7 +74,7 @@ export type DeviceProfile = {
  * User writing control.
  *
  * Auto: `textLooksVertical` on a markup/CSS sample → vertical, else
- * horizontal. Override always wins. TXT and CBZ have no markup signal →
+ * horizontal. Override always wins. TXT has no markup signal →
  * horizontal. Auto does not use language, glyphs, filename, or
  * `page-progression-direction`. False horizontal is the safer miss.
  */
@@ -86,7 +86,7 @@ export type ResolvedWritingMode = "horizontal" | "vertical";
 /**
  * Planned adapters. EPUB, TXT, MOBI, and FB2 are registered. Do not feed TXT / MOBI / AZW / FB2 to CREngine.
  */
-export type AdapterId = "epub" | "txt" | "mobi" | "fb2" | "cbz";
+export type AdapterId = "epub" | "txt" | "mobi" | "fb2";
 
 export type PersistSettings = {
   deviceId: string;
@@ -97,6 +97,8 @@ export type PersistSettings = {
   readDirection: number;
   renameFromTitle: boolean;
   locale: import("./i18n").LocalePref;
+  /** Horizontal EPUB uses CREngine (default). Off uses the 横書き pager. */
+  epubCrengine: boolean;
 };
 
 export type ConvertSettings = PersistSettings & {

@@ -218,6 +218,7 @@ const en = {
   creatingRenderer: "Creating page renderer…",
   openingFoliate: "Opening with Foliate…",
   verticalFoliate: "Vertical · laying out with Foliate",
+  horizontalFoliate: "Horizontal · laying out with Foliate",
   openingFile: "Opening {name}…",
   countingVertical: "Counting vertical pages…",
   foliateReady: "Foliate ready · {n} pages",
@@ -239,6 +240,8 @@ const en = {
   encodingAuto: "Auto",
   encodingThisFile: "This file · {name}",
   mobiDrm: "This Kindle file is encrypted and cannot be opened.",
+  epubCrengine: "CREngine for horizontal EPUB",
+  epubCrengineDesc: "Off uses the same pager as TXT and Kindle.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -357,6 +360,7 @@ const ja: Record<MessageKey, string> = {
   creatingRenderer: "ページレンダラを作成中…",
   openingFoliate: "Foliate で開いています…",
   verticalFoliate: "縦書き · Foliate で組版",
+  horizontalFoliate: "横書き · Foliate で組版",
   openingFile: "{name} を開いています…",
   countingVertical: "縦書きページを数えています…",
   foliateReady: "Foliate 準備完了 · {n} ページ",
@@ -378,6 +382,8 @@ const ja: Record<MessageKey, string> = {
   encodingAuto: "自動",
   encodingThisFile: "このファイル · {name}",
   mobiDrm: "この Kindle ファイルは暗号化されているため開けません。",
+  epubCrengine: "横書き EPUB に CREngine",
+  epubCrengineDesc: "オフなら TXT や Kindle と同じ横書きページャを使います。",
 };
 
 const zh: Record<MessageKey, string> = {
@@ -492,6 +498,7 @@ const zh: Record<MessageKey, string> = {
   creatingRenderer: "正在创建页面渲染器…",
   openingFoliate: "正在用 Foliate 打开…",
   verticalFoliate: "竖排 · 使用 Foliate 排版",
+  horizontalFoliate: "横排 · 使用 Foliate 排版",
   openingFile: "正在打开 {name}…",
   countingVertical: "正在统计竖排页数…",
   foliateReady: "Foliate 已就绪 · {n} 页",
@@ -513,6 +520,8 @@ const zh: Record<MessageKey, string> = {
   encodingAuto: "自动",
   encodingThisFile: "本文件 · {name}",
   mobiDrm: "此 Kindle 文件已加密，无法打开。",
+  epubCrengine: "横排 EPUB 使用 CREngine",
+  epubCrengineDesc: "关闭后与 TXT、Kindle 共用横排分页器。",
 };
 
 const zhHant: Record<MessageKey, string> = {
@@ -627,6 +636,7 @@ const zhHant: Record<MessageKey, string> = {
   creatingRenderer: "正在建立頁面算繪器…",
   openingFoliate: "正在用 Foliate 開啟…",
   verticalFoliate: "直排 · 使用 Foliate 排版",
+  horizontalFoliate: "橫排 · 使用 Foliate 排版",
   openingFile: "正在開啟 {name}…",
   countingVertical: "正在統計直排頁數…",
   foliateReady: "Foliate 已就緒 · {n} 頁",
@@ -648,6 +658,8 @@ const zhHant: Record<MessageKey, string> = {
   encodingAuto: "自動",
   encodingThisFile: "本檔 · {name}",
   mobiDrm: "此 Kindle 檔案已加密，無法開啟。",
+  epubCrengine: "橫排 EPUB 使用 CREngine",
+  epubCrengineDesc: "關閉後與 TXT、Kindle 共用橫排分頁器。",
 };
 
 const ko: Record<MessageKey, string> = {
@@ -762,6 +774,7 @@ const ko: Record<MessageKey, string> = {
   creatingRenderer: "페이지 렌더러를 만드는 중…",
   openingFoliate: "Foliate로 여는 중…",
   verticalFoliate: "세로쓰기 · Foliate로 조판",
+  horizontalFoliate: "가로쓰기 · Foliate로 조판",
   openingFile: "{name}을(를) 여는 중…",
   countingVertical: "세로쓰기 쪽 수를 세는 중…",
   foliateReady: "Foliate 준비 완료 · {n}쪽",
@@ -783,6 +796,8 @@ const ko: Record<MessageKey, string> = {
   encodingAuto: "자동",
   encodingThisFile: "이 파일 · {name}",
   mobiDrm: "이 Kindle 파일은 암호화되어 열 수 없습니다.",
+  epubCrengine: "가로쓰기 EPUB에 CREngine",
+  epubCrengineDesc: "끄면 TXT·Kindle과 같은 가로쓰기 페이저를 씁니다.",
 };
 
 const dictionaries: Record<Locale, Record<MessageKey, string>> = {

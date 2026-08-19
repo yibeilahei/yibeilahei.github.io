@@ -15,8 +15,7 @@ match adapter by magic (not “is this EPUB?”)
      ├── EPUB          zip + CSS (Foliate makeBook)
      ├── TXT           paragraphs → HTML
      ├── MOBI/AZW/AZW3 Foliate MOBI (refuse DRM)
-     ├── FB2           Foliate
-     └── CBZ           Foliate comic (horizontal only)
+     └── FB2           Foliate
      │
      ▼
 same book shape: sections, HTML load(), toc, metadata, script
@@ -41,7 +40,7 @@ RGBA frames → XTCH
 
 Queue shows **Vertical / Horizontal**, not CREngine / Foliate.
 
-**True final:** CREngine is gone. Until Step 8 it remains an EPUB + horizontal specialist only.
+**True final:** CREngine is gone. Until Step 7 it remains an EPUB + horizontal specialist only.
 
 ## Locked decisions
 
@@ -52,11 +51,10 @@ Queue shows **Vertical / Horizontal**, not CREngine / Foliate.
 - **Auto** means tategaki markup, not language and not manga RTL:
   - Shared test: existing `textLooksVertical()` (`writing-mode: vertical-rl/lr` with prefixes, `primary-writing-mode` meta).
   - EPUB, AZW3/KF8, HTML, FB2, MOBI: sniff a sample of styles + body after the adapter can provide HTML/CSS.
-  - TXT and CBZ: no markup signal → **horizontal**. User can still pick Vertical for TXT.
-  - Do **not** use script/glyphs, line length, filename, or `page-progression-direction` / ComicInfo RTL for Auto. RTL is the existing read-direction setting.
+  - TXT: no markup signal → **horizontal**. User can still pick Vertical for TXT.
+  - Do **not** use script/glyphs, line length, filename, or `page-progression-direction` for Auto. RTL is the existing read-direction setting.
   - False horizontal is the safer miss. Override always wins.
 - Kindle: detect PalmDoc `encryption`; if set, refuse with a clear error. No DRM path. No KFX / AZW4 in this plan.
-- CBZ / fixed-layout: scale images to the device. Do not run 縦書き flow columns. Vertical control ignored or hidden.
 - Do not feed TXT/MOBI/AZW/FB2 to CREngine. Do not wrap them as fake EPUBs to reuse `createVerticalPager` unless a later step explicitly says so (the plan does not).
 - Script/fonts stay separate from writing mode (`detectScript` on text/language).
 
@@ -92,7 +90,7 @@ Write the book shape and Auto rule into types/comments (not a new engine).
 - A book is `sections` + HTML `load()` + metadata + toc + script.
 - Auto: `textLooksVertical` on markup/CSS → V, else H.
 - Override always wins.
-- TXT/CBZ: no markup signal → H.
+- TXT: no markup signal → H.
 
 Still only EPUB in the UI.
 
@@ -156,7 +154,7 @@ One Kindle adapter:
 
 **Done when:** one DRM-free `.azw3` and one `.mobi` each work in Auto, and both overrides work.
 
-**Risk:** slow unpack on drop (show Detecting…; do not full-decompress the book in the drop handler). KF8 CSS vs `vertical-rl !important`. Do not add FB2/CBZ here.
+**Risk:** slow unpack on drop (show Detecting…; do not full-decompress the book in the drop handler). KF8 CSS vs `vertical-rl !important`. Do not add FB2 here.
 
 UI: `.azw` rides with MOBI/AZW3 (already listed as coming soon).
 
@@ -164,11 +162,7 @@ UI: `.azw` rides with MOBI/AZW3 (already listed as coming soon).
 
 Same pattern as Step 5. Foliate `makeBook` already opens FB2/FBZ. Auto from stylesheet/CSS; usually H.
 
-### Step 7 — CBZ (horizontal only)
-
-Image sections, scale to device. Auto = H. Vertical ignored/hidden. RTL later = read direction, not this pager.
-
-### Step 8 — EPUB-H onto the horizontal pager (optional, last)
+### Step 7 — EPUB-H onto the horizontal pager (optional, last)
 
 Point **horizontal EPUB** at the H pager. Keep CREngine behind a fallback or compare toggle until quality is good enough.
 
@@ -187,9 +181,9 @@ Step 0 contract
     │
     └─► 2 widen V intake ──► 3
               │
-              └─► 4 shared Auto ──► 5 Kindle ──► 6 FB2 ──► 7 CBZ
+              └─► 4 shared Auto ──► 5 Kindle ──► 6 FB2
                                         │
-                                        └─► 8 EPUB-H cutover
+                                        └─► 7 EPUB-H cutover
 ```
 
 Steps 1 and 2 can proceed in parallel. 3 needs both. 5 needs 1, 2, and 4.
@@ -198,12 +192,12 @@ Steps 1 and 2 can proceed in parallel. 3 needs both. 5 needs 1, 2, and 4.
 
 ## Coarse roadmap
 
-TXT (H then V) → routing → Kindle → FB2 → CBZ → optional kill CREngine.
+TXT (H then V) → routing → Kindle → FB2 → optional kill CREngine.
 
 ## Out of scope
 
 - KFX, AZW4, DRM removal
-- PDF, CBR, DOCX
+- PDF, CBZ, CBR, DOCX
 - Rebuilding CREngine WASM for extra formats
 - Auto-vertical from Japanese/Chinese/Korean text
 - Merging pagers before both axes work

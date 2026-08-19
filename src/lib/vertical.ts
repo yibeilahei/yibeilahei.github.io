@@ -1,5 +1,5 @@
 /**
- * 縦書き pager. Owns all vertical-rl output. EPUB File → Foliate makeBook.
+ * 縦書き pager. Owns all vertical-rl output. Accepts any Foliate-shaped Book.
  * Do not teach this file 横書き. Do not mount <foliate-view>: its paginator
  * ResizeObserver grows the iframe without bound and retriggers blob: loads.
  */
@@ -8,6 +8,7 @@ import { toCanvas } from "html-to-image";
 import {
   cssFontFamily,
   detectCjkFaceFromEpub,
+  isCjkFace,
   pickUsedFontFamily,
   systemFontFaceCss,
   type CjkFace,
@@ -288,10 +289,10 @@ async function snapshotViewport(vp: HTMLElement, w: number, h: number): Promise<
 }
 
 export async function createVerticalPager(
-  file: File,
+  book: Book,
   settings: ConvertSettings,
   onStatus?: StatusFn,
-  opts?: { maxPages?: number },
+  opts?: { maxPages?: number; titleFallback?: string; file?: File },
 ): Promise<{
   pager: VerticalPager;
   info: DocumentInfo;
@@ -302,11 +303,11 @@ export async function createVerticalPager(
 }> {
   const { w, h } = settings.device;
   if (onStatus) onStatus(t("openingFoliate"));
-  const [{ makeBook }, cjkFace] = await Promise.all([
-    import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<Book> }>,
-    detectCjkFaceFromEpub(file),
-  ]);
-  const book = await makeBook(file);
+  const cjkFace: CjkFace | null = isCjkFace(book.script)
+    ? book.script
+    : opts?.file
+      ? await detectCjkFaceFromEpub(opts.file)
+      : null;
   const usedFontFamily = pickUsedFontFamily(settings.fontId, cjkFace);
   const css = bookCss(settings, systemCss, w, h, cjkFace || "jp");
 
@@ -401,7 +402,7 @@ export async function createVerticalPager(
     throw new Error(t("noPages"));
   }
 
-  const title = metaString(book.metadata?.title) || file.name.replace(/\.epub$/i, "");
+  const title = metaString(book.metadata?.title) || opts?.titleFallback || "";
   const author = metaString(book.metadata?.author) || metaString(book.metadata?.creator);
   const toc = flattenToc(book.toc, book, pageMap);
   const cache = new Map<string, Uint8ClampedArray>();

@@ -122,7 +122,7 @@ export function ConverterApp() {
     saveSettings(settings);
   }, [hydrated, settings]);
 
-  const locale = resolveLocale(settings.locale);
+  const locale = resolveLocale(settings.locale, hydrated ? undefined : "en");
 
   useEffect(() => {
     if (!hydrated) return;

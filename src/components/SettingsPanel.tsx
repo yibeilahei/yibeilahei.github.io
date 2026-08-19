@@ -131,13 +131,13 @@ export function SettingsPanel({
   onTxtEncodingChange,
   writingDisabled,
 }: Props) {
-  const locale = resolveLocale(settings.locale);
+  const isClient = useSyncExternalStore(subscribeNoop, clientSnapshot, serverSnapshot);
+  const locale = resolveLocale(settings.locale, isClient ? undefined : "en");
   const vertical =
     bookWriting?.writingMode === "vertical" ||
     (bookWriting?.writingMode === "auto" && bookWriting.detectedVertical === true);
   const writingLocked = !bookWriting || writingDisabled;
   const fontLocked = !bookWriting || writingDisabled;
-  const isClient = useSyncExternalStore(subscribeNoop, clientSnapshot, serverSnapshot);
   const installedIds = useMemo(
     () => (isClient ? availableFontChoiceIds() : null),
     [isClient],

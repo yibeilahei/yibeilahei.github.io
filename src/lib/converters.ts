@@ -9,6 +9,7 @@ import { resolveLayoutEngine } from "./detectVertical";
 import { detectScriptFromEpub } from "./fonts";
 import { t } from "./i18n";
 import type {
+  Book,
   BookSession,
   Converter,
   ConvertHooks,
@@ -74,12 +75,20 @@ const EpubConverter: Converter = {
     const layout = await resolveLayoutEngine(file, settings.writingMode);
     if (layout.engine === "foliate") {
       if (onStatus) onStatus(t("verticalFoliate"));
-      const { createVerticalPager } = await import("./vertical");
+      const [{ createVerticalPager }, { makeBook }] = await Promise.all([
+        import("./vertical"),
+        import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<Book> }>,
+      ]);
+      const book = await makeBook(file);
       const vertical = await createVerticalPager(
-        file,
+        book,
         { ...settings, writingMode: "vertical" },
         onStatus,
-        { maxPages: opts?.maxPages },
+        {
+          maxPages: opts?.maxPages,
+          titleFallback: file.name.replace(/\.epub$/i, ""),
+          file,
+        },
       );
       return {
         kind: "vertical" as const,

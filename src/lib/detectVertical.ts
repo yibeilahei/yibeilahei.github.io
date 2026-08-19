@@ -1,10 +1,17 @@
 /**
- * Decide whether an EPUB is 縦書き from its CSS / markup.
- * page-progression-direction=rtl alone is not enough (manga is often 横書き).
+ * Auto writing-mode from markup/CSS — not language, not manga RTL.
+ *
+ * - `textLooksVertical(sample)` → vertical, else horizontal
+ * - User override always wins (`effectiveWritingMode`)
+ * - TXT and CBZ have no markup signal → pass an empty sample → horizontal
+ * - `page-progression-direction=rtl` alone is not enough (manga is often 横書き)
+ *
+ * EPUB still sniffs the zip (`isVerticalEpub`).
+ * Horizontal EPUB still maps to CREngine.
  */
 
 import JSZip from "jszip";
-import type { WritingMode } from "./types";
+import type { ResolvedWritingMode, WritingMode } from "./types";
 
 const VERTICAL_CSS =
   /(?:-webkit-|-epub-|-ms-)?writing-mode\s*:\s*vertical-(?:rl|lr)/i;
@@ -12,6 +19,15 @@ const VERTICAL_META = /primary-writing-mode[^>]*vertical/i;
 
 export function textLooksVertical(text: string): boolean {
   return VERTICAL_CSS.test(text) || VERTICAL_META.test(text);
+}
+
+/**
+ * Auto from a markup/CSS sample. Missing/empty sample → horizontal
+ * (TXT, CBZ, or a failed sniff). Does not look at language, glyphs,
+ * filename, or page-progression-direction.
+ */
+export function detectedVerticalFromSample(sample: string | null | undefined): boolean {
+  return Boolean(sample && textLooksVertical(sample));
 }
 
 export async function isVerticalEpub(file: File): Promise<boolean> {
@@ -29,10 +45,11 @@ export async function isVerticalEpub(file: File): Promise<boolean> {
 
 export type LayoutEngine = "foliate" | "crengine";
 
+/** Override always wins. Auto + no detection → horizontal (safer miss). */
 export function effectiveWritingMode(
   writingMode: WritingMode,
   detectedVertical: boolean | null,
-): "horizontal" | "vertical" {
+): ResolvedWritingMode {
   if (writingMode === "vertical") return "vertical";
   if (writingMode === "horizontal") return "horizontal";
   return detectedVertical ? "vertical" : "horizontal";
@@ -47,6 +64,7 @@ export function convertWritingMode(
   return detectedVertical ? "vertical" : "horizontal";
 }
 
+/** EPUB only: vertical → Foliate pager, horizontal → CREngine. */
 export async function resolveLayoutEngine(
   file: File,
   writingMode: string,

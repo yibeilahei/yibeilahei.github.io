@@ -1,7 +1,7 @@
 /**
- * 縦書き via foliate-js EPUB parsing + a fixed-size iframe.
- * We do not mount <foliate-view>: its paginator ResizeObserver grows the
- * iframe without bound and retriggers blob: resource loads.
+ * 縦書き pager. Owns all vertical-rl output. EPUB File → Foliate makeBook.
+ * Do not teach this file 横書き. Do not mount <foliate-view>: its paginator
+ * ResizeObserver grows the iframe without bound and retriggers blob: loads.
  */
 
 import { toCanvas } from "html-to-image";
@@ -13,23 +13,17 @@ import {
   type CjkFace,
 } from "./fonts";
 import { t } from "./i18n";
-import type { ConvertSettings, DocumentInfo, StatusFn, TocEntry, VerticalPager } from "./types";
+import type {
+  Book,
+  ConvertSettings,
+  DocumentInfo,
+  StatusFn,
+  TocEntry,
+  VerticalPager,
+} from "./types";
 const systemCss = systemFontFaceCss();
 
 type PageWindow = { shift: number };
-
-type FoliateSection = {
-  linear?: string;
-  load: () => Promise<string>;
-  unload?: () => void;
-};
-
-type FoliateBook = {
-  metadata?: { title?: unknown; author?: unknown; creator?: unknown };
-  toc?: Array<{ label?: string; href?: string; subitems?: unknown[] }>;
-  sections: FoliateSection[];
-  resolveHref?: (href: string) => { index?: number };
-};
 
 function metaString(value: unknown): string {
   if (!value) return "";
@@ -156,8 +150,8 @@ function bookCss(
 }
 
 function flattenToc(
-  items: Array<{ label?: string; href?: string; subitems?: unknown[] }> | undefined,
-  book: FoliateBook,
+  items: Book["toc"],
+  book: Book,
   pageMap: Array<{ index: number; page: number }>,
 ): TocEntry[] {
   const out: TocEntry[] = [];
@@ -172,7 +166,7 @@ function flattenToc(
         /* ignore */
       }
       if (item.label) out.push({ title: item.label, page });
-      walk(item.subitems as typeof items);
+      walk(item.subitems);
     }
   };
   walk(items);
@@ -309,7 +303,7 @@ export async function createVerticalPager(
   const { w, h } = settings.device;
   if (onStatus) onStatus(t("openingFoliate"));
   const [{ makeBook }, cjkFace] = await Promise.all([
-    import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<FoliateBook> }>,
+    import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<Book> }>,
     detectCjkFaceFromEpub(file),
   ]);
   const book = await makeBook(file);

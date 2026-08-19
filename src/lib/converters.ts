@@ -1,6 +1,8 @@
 /**
- * Format registry. EPUB is implemented; other book formats plug in later
- * by calling registerConverter() with the same shape.
+ * Format registry. EPUB is the only adapter today.
+ * Later adapters (TXT, MOBI/AZW, FB2, CBZ) produce the shared Book shape
+ * in types.ts; pagers split on writing mode, not file type.
+ * Do not feed TXT/MOBI/AZW/FB2 to CREngine.
  */
 
 import { encodeXthPage, buildXtchContainer, outputNameFromSource } from "./xtch";

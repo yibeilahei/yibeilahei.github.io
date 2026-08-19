@@ -483,6 +483,7 @@ export function fontChoice(id: string | undefined): FontChoice {
   return FONT_CHOICES[0];
 }
 
+/** Script/fonts only. Not used for Auto writing-mode (see detectVertical). */
 export function detectScript(text: string): ScriptId | null {
   const dcLang = text.match(/<dc:language[^>]*>\s*([^<]+)/i);
   if (dcLang) {

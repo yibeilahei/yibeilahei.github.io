@@ -1,5 +1,5 @@
 /**
- * CREngine WASM loader — same engine FilesPage uses for EPUB → XTCH.
+ * CREngine WASM loader
  */
 
 import {

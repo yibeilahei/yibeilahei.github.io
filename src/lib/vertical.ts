@@ -14,9 +14,9 @@ import {
 } from "./fonts";
 import { t } from "./i18n";
 import type { ConvertSettings, DocumentInfo, StatusFn, TocEntry, VerticalPager } from "./types";
-import { clusterColumns, fallbackPageWindows, packColumnPages, type ColumnRect, type PageWindow } from "./verticalPages";
-
 const systemCss = systemFontFaceCss();
+
+type PageWindow = { shift: number; width: number };
 
 type FoliateSection = {
   linear?: string;
@@ -108,8 +108,9 @@ function bookCss(
       -webkit-writing-mode: vertical-rl;
       text-orientation: mixed;
       height: ${h}px;
-      width: max-content;
+      width: ${w}px;
       max-width: none;
+      max-height: ${h}px;
       position: absolute;
       top: 0;
       right: 0;
@@ -121,6 +122,9 @@ function bookCss(
       font-size: ${fontSize}px;
       line-height: ${pitch}px;
       text-align: ${align};
+      column-width: ${h}px;
+      column-gap: 0;
+      column-fill: auto;
     }
     .lz-flow, .lz-flow *:not(ruby):not(rt):not(rtc):not(rp) {
       writing-mode: vertical-rl !important;
@@ -139,15 +143,23 @@ function bookCss(
       ruby-align: space-around;
       white-space: nowrap;
       break-inside: avoid;
+      page-break-inside: avoid;
     }
     .lz-flow rt, .lz-flow rtc {
       font-size: 0.5em !important;
       line-height: 1 !important;
       font-weight: 400 !important;
     }
-    .lz-flow img, .lz-flow svg, .lz-flow video {
-      max-width: ${Math.max(40, w)}px;
-      max-height: ${Math.max(40, h)}px;
+    .lz-flow img, .lz-flow svg, .lz-flow video, .lz-flow canvas {
+      box-sizing: border-box;
+      display: block;
+      max-width: ${Math.max(1, w - 2)}px;
+      max-height: ${Math.max(1, h - 2)}px;
+      object-fit: contain;
+      break-inside: avoid;
+      break-before: column;
+      break-after: column;
+      page-break-inside: avoid;
     }
     pre { white-space: pre-wrap !important; }
   `;
@@ -243,90 +255,21 @@ async function waitAssets(doc: Document) {
   await waitFrame();
 }
 
-function isRubyAnnotation(node: Node): boolean {
-  let el = node.parentElement;
-  while (el) {
-    const tag = el.tagName;
-    if (tag === "RT" || tag === "RP" || tag === "RTC") return true;
-    if (tag === "RUBY") break;
-    el = el.parentElement;
-  }
-  return false;
-}
-
-function rubyIdOf(node: Node, flow: HTMLElement): string | undefined {
-  let el = node instanceof Element ? node : node.parentElement;
-  while (el && el !== flow) {
-    if (el.tagName === "RUBY") {
-      let id = el.getAttribute("data-lz-ruby");
-      if (!id) {
-        id = "rb-" + Math.random().toString(36).slice(2, 9);
-        el.setAttribute("data-lz-ruby", id);
-      }
-      return id;
-    }
-    el = el.parentElement;
-  }
-  return undefined;
-}
-
-function collectColumnRects(flow: HTMLElement): ColumnRect[] {
-  const doc = flow.ownerDocument;
-  const rects: ColumnRect[] = [];
-  const range = doc.createRange();
-  const walker = doc.createTreeWalker(flow, NodeFilter.SHOW_TEXT);
-  let node: Node | null = walker.nextNode();
-  while (node) {
-    if (!isRubyAnnotation(node) && node.textContent && node.textContent.trim()) {
-      range.selectNodeContents(node);
-      const list = range.getClientRects();
-      const group = rubyIdOf(node, flow);
-      for (let i = 0; i < list.length; i++) {
-        const r = list[i];
-        if (r.width > 0.5 && r.height > 0.5) {
-          rects.push({ left: r.left, right: r.right, group });
-        }
-      }
-    }
-    node = walker.nextNode();
-  }
-  const rubies = flow.querySelectorAll("ruby");
-  for (let i = 0; i < rubies.length; i++) {
-    const ruby = rubies[i];
-    const group = rubyIdOf(ruby, flow);
-    const list = ruby.getClientRects();
-    for (let j = 0; j < list.length; j++) {
-      const r = list[j];
-      if (r.width > 0.5 && r.height > 0.5) {
-        rects.push({ left: r.left, right: r.right, group });
-      }
-    }
-  }
-  const replaced = flow.querySelectorAll("img, svg, video, canvas");
-  for (let i = 0; i < replaced.length; i++) {
-    const r = replaced[i].getBoundingClientRect();
-    if (r.width > 0.5 && r.height > 0.5) {
-      rects.push({ left: r.left, right: r.right });
-    }
-  }
-  return rects;
-}
-
 function pageWindowsOf(
   flow: HTMLElement,
+  clip: HTMLElement,
   pageW: number,
+  pageH: number,
   margin: number,
-  pitch: number,
 ): PageWindow[] {
   const usable = Math.max(1, pageW - margin * 2);
-  const clipRight = pageW - margin;
   flow.style.transform = "";
-  const columns = clusterColumns(collectColumnRects(flow), pitch);
-  if (!columns.length) {
-    const width = Math.max(flow.scrollWidth, flow.offsetWidth, usable);
-    return fallbackPageWindows(width, usable);
-  }
-  return packColumnPages(columns, usable, clipRight);
+  const totalHeight = Math.max(flow.scrollHeight, clip.scrollHeight, pageH);
+  const count = Math.max(1, Math.round(totalHeight / pageH));
+  return Array.from({ length: count }, (_, page) => ({
+    shift: page * pageH,
+    width: usable,
+  }));
 }
 
 function showPage(
@@ -339,7 +282,7 @@ function showPage(
   margin: number,
 ) {
   const loc = pages[Math.max(0, Math.min(pages.length - 1, page))] || { shift: 0, width: 1 };
-  flow.style.transform = `translateX(${loc.shift}px)`;
+  flow.style.transform = `translateY(${-loc.shift}px)`;
   clip.style.width = `${loc.width}px`;
   const leftMask = vp.querySelector(".lz-mask-l") as HTMLElement | null;
   if (leftMask) {
@@ -432,6 +375,7 @@ export async function createVerticalPager(
   let currentVp: HTMLElement | null = null;
   let currentClip: HTMLElement | null = null;
   let currentPages: PageWindow[] = [{ shift: 0, width: Math.max(1, w - margin * 2) }];
+  const sectionPages = new Map<number, PageWindow[]>();
 
   async function openSection(index: number) {
     if (currentIndex === index && currentFlow && currentVp && currentClip) {
@@ -446,7 +390,8 @@ export async function createVerticalPager(
     currentVp = wrapped.vp;
     currentClip = wrapped.clip;
     await waitAssets(doc);
-    currentPages = pageWindowsOf(currentFlow, w, margin, pitch);
+    currentPages = sectionPages.get(index) || pageWindowsOf(currentFlow, currentClip, w, h, margin);
+    sectionPages.set(index, currentPages);
     currentIndex = index;
     return { flow: currentFlow, vp: currentVp, clip: currentClip, pages: currentPages };
   }
@@ -508,6 +453,7 @@ export async function createVerticalPager(
       renderPage,
       destroy() {
         cache.clear();
+        sectionPages.clear();
         try { book.sections[currentIndex]?.unload?.(); } catch { /* ignore */ }
         iframe.src = "about:blank";
         host.remove();

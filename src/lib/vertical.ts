@@ -16,7 +16,7 @@ import { t } from "./i18n";
 import type { ConvertSettings, DocumentInfo, StatusFn, TocEntry, VerticalPager } from "./types";
 const systemCss = systemFontFaceCss();
 
-type PageWindow = { shift: number; width: number };
+type PageWindow = { shift: number };
 
 type FoliateSection = {
   linear?: string;
@@ -92,16 +92,6 @@ function bookCss(
       height: ${h}px;
       overflow: hidden;
     }
-    .lz-mask {
-      position: absolute;
-      background: #fff;
-      z-index: 1;
-      pointer-events: none;
-    }
-    .lz-mask-l { left: 0; top: 0; bottom: 0; width: 0; }
-    .lz-mask-r { right: 0; top: 0; bottom: 0; width: 0; }
-    .lz-mask-t { left: 0; right: 0; top: 0; height: 0; }
-    .lz-mask-b { left: 0; right: 0; bottom: 0; height: 0; }
     .lz-flow {
       box-sizing: border-box;
       writing-mode: vertical-rl;
@@ -230,11 +220,6 @@ function wrapDocument(doc: Document, css: string): { flow: HTMLElement; vp: HTML
   while (body.firstChild) flow.append(body.firstChild);
   clip.append(flow);
   vp.append(clip);
-  for (const side of ["l", "r", "t", "b"]) {
-    const mask = doc.createElement("div");
-    mask.className = `lz-mask lz-mask-${side}`;
-    vp.append(mask);
-  }
   body.append(vp);
   return { flow, vp, clip };
 }
@@ -282,39 +267,16 @@ async function waitAssets(doc: Document) {
   await waitFrame();
 }
 
-function pageWindowsOf(
-  flow: HTMLElement,
-  clip: HTMLElement,
-  pageW: number,
-  pageH: number,
-  margin: number,
-): PageWindow[] {
-  const usable = Math.max(1, pageW - margin * 2);
+function pageWindowsOf(flow: HTMLElement, clip: HTMLElement, pageH: number): PageWindow[] {
   flow.style.transform = "";
   const totalHeight = Math.max(flow.scrollHeight, clip.scrollHeight, pageH);
   const count = Math.max(1, Math.round(totalHeight / pageH));
-  return Array.from({ length: count }, (_, page) => ({
-    shift: page * pageH,
-    width: usable,
-  }));
+  return Array.from({ length: count }, (_, page) => ({ shift: page * pageH }));
 }
 
-function showPage(
-  flow: HTMLElement,
-  clip: HTMLElement,
-  vp: HTMLElement,
-  pages: PageWindow[],
-  page: number,
-  pageW: number,
-  margin: number,
-) {
-  const loc = pages[Math.max(0, Math.min(pages.length - 1, page))] || { shift: 0, width: 1 };
+function showPage(flow: HTMLElement, pages: PageWindow[], page: number) {
+  const loc = pages[Math.max(0, Math.min(pages.length - 1, page))] || { shift: 0 };
   flow.style.transform = `translateY(${-loc.shift}px)`;
-  clip.style.width = `${loc.width}px`;
-  const leftMask = vp.querySelector(".lz-mask-l") as HTMLElement | null;
-  if (leftMask) {
-    leftMask.style.width = `${Math.max(margin, pageW - margin - loc.width)}px`;
-  }
 }
 
 async function snapshotViewport(vp: HTMLElement, w: number, h: number): Promise<Uint8ClampedArray> {
@@ -345,10 +307,6 @@ export async function createVerticalPager(
   usedFontFamily: string;
 }> {
   const { w, h } = settings.device;
-  const margin = 0;
-  const fontSize = Number(settings.fontSize) || 34;
-  const lineHeight = (Number(settings.lineHeight) || 120) / 100;
-  const pitch = columnPitch(w, fontSize, lineHeight);
   if (onStatus) onStatus(t("openingFoliate"));
   const [{ makeBook }, cjkFace] = await Promise.all([
     import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<FoliateBook> }>,
@@ -401,7 +359,7 @@ export async function createVerticalPager(
   let currentFlow: HTMLElement | null = null;
   let currentVp: HTMLElement | null = null;
   let currentClip: HTMLElement | null = null;
-  let currentPages: PageWindow[] = [{ shift: 0, width: Math.max(1, w - margin * 2) }];
+  let currentPages: PageWindow[] = [{ shift: 0 }];
   const sectionPages = new Map<number, PageWindow[]>();
 
   async function openSection(index: number) {
@@ -417,7 +375,7 @@ export async function createVerticalPager(
     currentVp = wrapped.vp;
     currentClip = wrapped.clip;
     await waitAssets(doc);
-    currentPages = sectionPages.get(index) || pageWindowsOf(currentFlow, currentClip, w, h, margin);
+    currentPages = sectionPages.get(index) || pageWindowsOf(currentFlow, currentClip, h);
     sectionPages.set(index, currentPages);
     currentIndex = index;
     return { flow: currentFlow, vp: currentVp, clip: currentClip, pages: currentPages };
@@ -459,8 +417,8 @@ export async function createVerticalPager(
     const key = loc.index + ":" + loc.page;
     const hit = cache.get(key);
     if (hit) return hit;
-    const { flow, vp, clip, pages } = await openSection(loc.index);
-    showPage(flow, clip, vp, pages, loc.page, w, margin);
+    const { flow, vp, pages } = await openSection(loc.index);
+    showPage(flow, pages, loc.page);
     await waitFrame();
     const copy = await snapshotViewport(vp, w, h);
     cache.set(key, copy);

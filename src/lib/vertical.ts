@@ -240,18 +240,45 @@ function wrapDocument(doc: Document, css: string): { flow: HTMLElement; vp: HTML
 }
 
 async function waitAssets(doc: Document) {
-  try { await doc.fonts.ready; } catch { /* ignore */ }
+  async function waitWithLimit(promise: Promise<unknown>, label: string, timeoutMs: number) {
+    let timer = 0;
+    let timedOut = false;
+    await Promise.race([
+      promise.catch(() => undefined),
+      new Promise<void>((resolve) => {
+        timer = window.setTimeout(() => {
+          timedOut = true;
+          resolve();
+        }, timeoutMs);
+      }),
+    ]);
+    window.clearTimeout(timer);
+    if (timedOut) console.warn(`Timed out waiting for EPUB ${label}.`);
+    return timedOut;
+  }
+
+  const fontsTimedOut = await waitWithLimit(Promise.resolve(doc.fonts.ready), "fonts", 5000);
+  if (fontsTimedOut) console.warn("Continuing with the configured fallback font.");
   const images = Array.from(doc.images || []);
-  await Promise.all(
-    images.map((img) => {
-      if (img.complete) return null;
-      return new Promise<void>((resolve) => {
-        const done = () => resolve();
-        img.addEventListener("load", done, { once: true });
-        img.addEventListener("error", done, { once: true });
-      });
-    }),
+  await waitWithLimit(
+    Promise.all(
+      images.map((img) => {
+        if (img.complete) return null;
+        return new Promise<void>((resolve) => {
+          const done = () => resolve();
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", done, { once: true });
+        });
+      }),
+    ),
+    "images",
+    10000,
   );
+  const unavailableImages = images.filter((img) => !img.complete || img.naturalWidth <= 0);
+  if (unavailableImages.length) {
+    console.error("EPUB images unavailable:", unavailableImages.length);
+    throw new Error(t("sectionFailed"));
+  }
   await waitFrame();
 }
 

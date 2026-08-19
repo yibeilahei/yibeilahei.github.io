@@ -1,6 +1,6 @@
 /**
  * Format registry. EPUB and TXT are wired.
- * TXT uses the horizontal pager only. Do not feed TXT to CREngine.
+ * TXT uses the H/V pagers. Do not feed TXT to CREngine.
  */
 
 import { encodeXthPage, buildXtchContainer, outputNameFromSource } from "./xtch";
@@ -214,14 +214,33 @@ const TxtConverter: Converter = {
 
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
     const { w, h } = settings.device;
-    // TXT is horizontal only until vertical TXT is wired.
     if (onStatus) onStatus(t("buildingPreview"));
     const { bookFromTxt } = await import("./txt");
-    const { createHorizontalPager } = await import("./horizontal");
     const book = await bookFromTxt(file, settings.txtEncoding || "auto");
+    const titleFallback = file.name.replace(/\.txt$/i, "");
+    if (settings.writingMode === "vertical") {
+      const { createVerticalPager } = await import("./vertical");
+      const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
+        maxPages: opts?.maxPages,
+        titleFallback,
+      });
+      return {
+        kind: "vertical" as const,
+        pager: vertical.pager,
+        pageCount: vertical.pageCount,
+        info: vertical.info,
+        toc: vertical.toc,
+        width: w,
+        height: h,
+        converter: this,
+        truncated: vertical.truncated,
+        usedFontFamily: vertical.usedFontFamily,
+      };
+    }
+    const { createHorizontalPager } = await import("./horizontal");
     const horizontal = await createHorizontalPager(book, settings, onStatus, {
       maxPages: opts?.maxPages,
-      titleFallback: file.name.replace(/\.txt$/i, ""),
+      titleFallback,
     });
     return {
       kind: "horizontal" as const,

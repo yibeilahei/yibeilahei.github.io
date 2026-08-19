@@ -38,5 +38,7 @@ assert.equal(pagerKind("horizontal", true, "txt"), "horizontal");
 assert.equal(pagerKind("auto", null, "txt"), "horizontal");
 assert.equal(pagerKind("auto", false, "mobi"), "horizontal");
 assert.equal(pagerKind("vertical", false, "mobi"), "vertical");
+assert.equal(pagerKind("auto", false, "fb2"), "horizontal");
+assert.equal(pagerKind("vertical", false, "fb2"), "vertical");
 
 console.log("detectVertical tests passed");

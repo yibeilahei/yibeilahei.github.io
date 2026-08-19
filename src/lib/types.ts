@@ -84,7 +84,7 @@ export type WritingMode = "auto" | "horizontal" | "vertical";
 export type ResolvedWritingMode = "horizontal" | "vertical";
 
 /**
- * Planned adapters. EPUB, TXT, and MOBI are registered. Do not feed TXT / MOBI / AZW / FB2 to CREngine.
+ * Planned adapters. EPUB, TXT, MOBI, and FB2 are registered. Do not feed TXT / MOBI / AZW / FB2 to CREngine.
  */
 export type AdapterId = "epub" | "txt" | "mobi" | "fb2" | "cbz";
 

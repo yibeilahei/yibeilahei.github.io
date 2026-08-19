@@ -1,6 +1,6 @@
 /**
- * Format registry. EPUB, TXT, and MOBI/AZW/AZW3 are wired.
- * Auto is markup sample → textLooksVertical. Do not feed TXT/MOBI to CREngine.
+ * Format registry. EPUB, TXT, MOBI/AZW, and FB2 are wired.
+ * Auto is markup sample → textLooksVertical. Do not feed TXT/MOBI/FB2 to CREngine.
  */
 
 import { encodeXthPage, buildXtchContainer, outputNameFromSource } from "./xtch";
@@ -38,6 +38,8 @@ export async function matchConverterAsync(file: File): Promise<Converter | null>
   if (hit) return hit;
   const { isMobiMagic } = await import("./mobi");
   if (await isMobiMagic(file)) return converters.find((c) => c.id === "mobi") || null;
+  const { isFb2File } = await import("./fb2");
+  if (await isFb2File(file)) return converters.find((c) => c.id === "fb2") || null;
   return null;
 }
 
@@ -436,3 +438,120 @@ const MobiConverter: Converter = {
 };
 
 registerConverter(MobiConverter);
+
+const Fb2Converter: Converter = {
+  id: "fb2",
+  label: "FB2",
+  extensions: [".fb2", ".fbz"],
+  mimeTypes: ["application/x-fictionbook+xml", "application/x-zip-compressed-fb2"],
+  accepts(file) {
+    const lower = file.name.toLowerCase();
+    return (
+      lower.endsWith(".fb2") ||
+      lower.endsWith(".fbz") ||
+      lower.endsWith(".fb2.zip") ||
+      file.type === "application/x-fictionbook+xml" ||
+      file.type === "application/x-zip-compressed-fb2"
+    );
+  },
+
+  async sniff(file) {
+    const { sniffFb2 } = await import("./fb2");
+    const sniff = await sniffFb2(file);
+    return { markup: sniff.markup, script: sniff.script, encoding: null };
+  },
+
+  async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
+    const { w, h } = settings.device;
+    if (onStatus) onStatus(t("buildingPreview"));
+    const { openFb2Book } = await import("./fb2");
+    const book = await openFb2Book(file);
+    const titleFallback = file.name.replace(/\.(fb2\.zip|fb2|fbz)$/i, "");
+    let mode = settings.writingMode;
+    if (mode === "auto") {
+      const sniff = await this.sniff(file);
+      mode = detectedVerticalFromSample(sniff.markup) ? "vertical" : "horizontal";
+    }
+    if (pagerKind(mode, null, this.id) === "vertical") {
+      const { createVerticalPager } = await import("./vertical");
+      const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
+        maxPages: opts?.maxPages,
+        titleFallback,
+      });
+      return {
+        kind: "vertical" as const,
+        pager: vertical.pager,
+        pageCount: vertical.pageCount,
+        info: vertical.info,
+        toc: vertical.toc,
+        width: w,
+        height: h,
+        converter: this,
+        truncated: vertical.truncated,
+        usedFontFamily: vertical.usedFontFamily,
+      };
+    }
+    const { createHorizontalPager } = await import("./horizontal");
+    const horizontal = await createHorizontalPager(book, settings, onStatus, {
+      maxPages: opts?.maxPages,
+      titleFallback,
+    });
+    return {
+      kind: "horizontal" as const,
+      pager: horizontal.pager,
+      pageCount: horizontal.pageCount,
+      info: horizontal.info,
+      toc: horizontal.toc,
+      width: w,
+      height: h,
+      converter: this,
+      truncated: horizontal.truncated,
+      usedFontFamily: horizontal.usedFontFamily,
+    };
+  },
+
+  async renderPage(session: BookSession, pageIndex: number) {
+    if (session.pager) return session.pager.renderPage(pageIndex);
+    throw new Error(t("rendererNotReady"));
+  },
+
+  async convert(file, settings: ConvertSettings, { onProgress, onStatus, signal, maxPages }: ConvertHooks = {}) {
+    const session = await this.load(file, settings, onStatus, { maxPages });
+    const available = session.pageCount;
+    const limit = maxPages ? Math.min(maxPages, available) : available;
+    const pages: Uint8Array[] = [];
+    try {
+      for (let i = 0; i < limit; i++) {
+        assertNotCancelled(signal);
+        const frame = await this.renderPage(session, i);
+        pages.push(encodeXthPage(frame, session.width, session.height));
+        if (onProgress) onProgress((i + 1) / limit, i + 1, limit);
+        if (i % 4 === 3) await yieldToMain();
+      }
+    } finally {
+      session.pager?.destroy();
+    }
+    const dir = Number(settings.readDirection);
+    const readDirection = dir === 1 || dir === 2 ? dir : 0;
+    const bytes = buildXtchContainer(
+      pages,
+      session.width,
+      session.height,
+      session.info,
+      session.toc,
+      { readDirection },
+    );
+    const partial = Boolean(session.truncated) || (maxPages != null && available > maxPages);
+    return {
+      bytes,
+      filename: outputNameFromSource(file.name, settings.renameFromTitle ? session.info.title || "" : ""),
+      info: session.info,
+      pageCount: limit,
+      partial,
+      engine: "foliate",
+      usedFontFamily: session.usedFontFamily,
+    };
+  },
+};
+
+registerConverter(Fb2Converter);

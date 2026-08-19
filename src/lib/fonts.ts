@@ -172,11 +172,14 @@ export const FONT_CHOICES: FontChoice[] = [
   { id: "songti-sc", family: "Songti SC", locals: ["Songti SC", "STSong"], group: "sc" },
   { id: "simsun", family: "SimSun", locals: ["SimSun", "NSimSun"], group: "sc" },
   { id: "noto-sc", family: "Noto Serif SC", locals: ["Noto Serif SC"], group: "sc", cdn: CJK_FONTS.sc },
-  { id: "pmingliu", family: "PMingLiU", locals: ["PMingLiU", "MingLiU", "Songti TC"], group: "tc" },
+  { id: "songti-tc", family: "Songti TC", locals: ["Songti TC"], group: "tc" },
+  { id: "lisong", family: "LiSong Pro", locals: ["LiSong Pro"], group: "tc" },
+  { id: "pmingliu", family: "PMingLiU", locals: ["PMingLiU", "MingLiU"], group: "tc" },
   { id: "noto-tc", family: "Noto Serif TC", locals: ["Noto Serif TC"], group: "tc", cdn: CJK_FONTS.tc },
   { id: "batang", family: "Batang", locals: ["Batang", "BatangChe"], group: "kr" },
   { id: "apple-myungjo", family: "AppleMyungjo", locals: ["AppleMyungjo"], group: "kr" },
   { id: "nanum", family: "Nanum Myeongjo", locals: ["Nanum Myeongjo"], group: "kr" },
+  { id: "gungsuh", family: "Gungsuh", locals: ["Gungsuh"], group: "kr" },
   { id: "noto-kr", family: "Noto Serif KR", locals: ["Noto Serif KR"], group: "kr", cdn: CJK_FONTS.kr },
   { id: "pt-serif", family: "PT Serif", locals: ["PT Serif"], group: "cyrl" },
   { id: "noto-serif", family: "Noto Serif", locals: ["Noto Serif"], group: "cyrl", cdn: NOTO_SERIF },
@@ -205,8 +208,8 @@ export const FONT_GROUPS: FontGroup[] = [
   { id: "latin", choiceIds: ["georgia", "times", "palatino", "literata"] },
   { id: "jp", choiceIds: ["yu-mincho", "hiragino", "ms-mincho", "noto-jp"] },
   { id: "sc", choiceIds: ["songti-sc", "simsun", "noto-sc"] },
-  { id: "tc", choiceIds: ["pmingliu", "noto-tc"] },
-  { id: "kr", choiceIds: ["batang", "apple-myungjo", "nanum", "noto-kr"] },
+  { id: "tc", choiceIds: ["songti-tc", "lisong", "pmingliu", "noto-tc"] },
+  { id: "kr", choiceIds: ["apple-myungjo", "nanum", "batang", "gungsuh", "noto-kr"] },
   { id: "cyrl", choiceIds: ["pt-serif", "noto-serif"] },
   { id: "arab", choiceIds: ["geeza", "trad-arabic", "noto-naskh"] },
   { id: "hebr", choiceIds: ["david", "arial-hebrew", "noto-hebr"] },
@@ -350,21 +353,107 @@ export function extraScriptChoices(scripts: Array<ScriptId | null | undefined>):
   return out;
 }
 
-export function availableFontChoiceIds(): string[] {
-  const ids = ["auto"];
-  const haveGroup = new Set<string>();
-  for (const choice of FONT_CHOICES) {
-    if (choice.id === "auto" || choice.cdn) continue;
-    if (firstAvailableFont(choice.locals)) {
-      ids.push(choice.id);
-      haveGroup.add(choice.group);
+function uniqueFontNames(names: string[]): string[] {
+  const out: string[] = [];
+  for (const name of names) {
+    if (name && !out.includes(name)) out.push(name);
+  }
+  return out;
+}
+
+function isCdnOnlyChoice(choice: FontChoice, script: ScriptId): boolean {
+  if (!choice.cdn) return false;
+  const stack = SYSTEM_STACKS[script] || [];
+  const names = uniqueFontNames([choice.family, ...choice.locals]);
+  return names.every((name) => name === choice.cdn?.family) && !stack.some((name) => names.includes(name));
+}
+
+type FaceCluster = { names: string[]; catalog?: FontChoice };
+
+function clustersForScript(script: ScriptId): FaceCluster[] {
+  const catalog = FONT_CHOICES.filter((choice) => choice.group === script);
+  const stack = SYSTEM_STACKS[script] || [];
+  const used = new Set<string>();
+  const clusters: FaceCluster[] = [];
+
+  const take = (names: string[], cat?: FontChoice) => {
+    const unique = uniqueFontNames(names);
+    if (!unique.length || unique.every((name) => used.has(name))) return;
+    for (const name of unique) used.add(name);
+    clusters.push({ names: unique, catalog: cat });
+  };
+
+  for (const name of stack) {
+    if (used.has(name)) continue;
+    const cat = catalog.find((choice) => choice.family === name || choice.locals.includes(name));
+    if (cat) {
+      take([...stack.filter((n) => n === cat.family || cat.locals.includes(n)), cat.family, ...cat.locals], cat);
+    } else {
+      take([name]);
     }
   }
-  for (const choice of FONT_CHOICES) {
-    if (!choice.cdn) continue;
-    if (!haveGroup.has(choice.group)) ids.push(choice.id);
+
+  for (const cat of catalog) {
+    if (isCdnOnlyChoice(cat, script)) continue;
+    if (used.has(cat.family) || cat.locals.some((name) => used.has(name))) continue;
+    take([cat.family, ...cat.locals], cat);
   }
-  return ids;
+  return clusters;
+}
+
+function cdnChoiceForScript(script: ScriptId): FontChoice | undefined {
+  return FONT_CHOICES.find((choice) => choice.group === script && choice.cdn);
+}
+
+function choicesForScript(script: ScriptId): FontChoice[] {
+  const out: FontChoice[] = [];
+  const seen = new Set<string>();
+  for (const cluster of clustersForScript(script)) {
+    const hit = firstAvailableFont(cluster.names);
+    if (!hit) continue;
+    const id = cluster.catalog?.id || `sys:${hit}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id,
+      family: hit,
+      locals: cluster.names,
+      group: script,
+      cdn: cluster.catalog?.cdn,
+    });
+  }
+  const cdn = cdnChoiceForScript(script);
+  if (cdn && !out.some((choice) => choice.id === cdn.id || choice.family === cdn.cdn?.family)) {
+    out.push(cdn);
+  }
+  return out;
+}
+
+let bookFontListCache: FontChoice[] | null = null;
+
+/** Installed stack faces (own labels, aliases collapsed) plus CDN Noto/Literata. */
+export function listBookFontChoices(): FontChoice[] {
+  if (!bookFontListCache) {
+    const out: FontChoice[] = [FONT_CHOICES[0]];
+    for (const group of FONT_GROUPS) {
+      if (group.id === "auto") continue;
+      out.push(...choicesForScript(group.id as ScriptId));
+    }
+    bookFontListCache = out;
+  }
+  return bookFontListCache;
+}
+
+export function bookFontChoice(id: string | undefined): FontChoice {
+  if (id) {
+    const hit = listBookFontChoices().find((choice) => choice.id === id);
+    if (hit) return hit;
+  }
+  return fontChoice(id);
+}
+
+export function availableFontChoiceIds(): string[] {
+  return listBookFontChoices().map((choice) => choice.id);
 }
 
 export function preferredFontGroups(
@@ -381,7 +470,7 @@ export function preferredFontGroups(
     : null;
 
   const extras = extraScriptChoices(
-    bookOnly
+    bookOnly && bookScript
       ? [bookScript]
       : [
           bookScript,
@@ -396,8 +485,15 @@ export function preferredFontGroups(
     else extraGroups.push({ id: choice.group, choiceIds: [choice.id] });
   }
 
+  const listed = allow ? listBookFontChoices() : null;
   const catalog: FontGroup[] = [
-    ...FONT_GROUPS,
+    ...FONT_GROUPS.map((group) => {
+      if (group.id === "auto" || !listed) return group;
+      return {
+        ...group,
+        choiceIds: listed.filter((choice) => choice.group === group.id).map((choice) => choice.id),
+      };
+    }),
     ...extraGroups.filter((g) => !FONT_GROUPS.some((base) => base.id === g.id)),
   ];
 
@@ -407,7 +503,7 @@ export function preferredFontGroups(
     if (!pinned.includes(script)) pinned.push(script);
   };
   add(bookScript);
-  if (!bookOnly) {
+  if (!bookOnly || !bookScript) {
     if (uiLang) add(scriptFromLang(uiLang));
     if (browserLang) add(scriptFromLang(browserLang));
   }
@@ -420,7 +516,6 @@ export function preferredFontGroups(
   };
 
   const auto = catalog.filter((g) => g.id === "auto").map(filterGroup);
-  if (bookOnly && !bookScript) return auto;
 
   const first = pinned
     .map((id) => catalog.find((g) => g.id === id))
@@ -431,11 +526,9 @@ export function preferredFontGroups(
     .filter((g) => g.id !== "auto" && !pinned.includes(g.id))
     .map(filterGroup)
     .filter((g) => g.choiceIds.length);
-  if (bookOnly) {
+  if (bookOnly && bookScript) {
     const latin =
-      bookScript && bookScript !== "latin"
-        ? rest.filter((g) => g.id === "latin")
-        : [];
+      bookScript !== "latin" ? rest.filter((g) => g.id === "latin") : [];
     return [...auto, ...first, ...latin];
   }
   return [...auto, ...first, ...rest];

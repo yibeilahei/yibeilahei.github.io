@@ -3,6 +3,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import {
   availableFontChoiceIds,
+  bookFontChoice,
   fontChoice,
   pickUsedFontFamily,
   preferredFontGroups,
@@ -127,9 +128,14 @@ export function SettingsPanel({
     [isClient],
   );
   const fontGroups = useMemo(() => {
-    const groups = preferredFontGroups(undefined, undefined, bookScript, installedIds, true);
+    const groups = preferredFontGroups(
+      settings.locale === "auto" ? undefined : settings.locale,
+      isClient ? navigator.language : undefined,
+      bookScript,
+      installedIds,
+    );
     return withCurrentFont(groups, bookFontId);
-  }, [bookScript, installedIds, bookFontId]);
+  }, [settings.locale, bookScript, installedIds, bookFontId, isClient]);
   const autoFamily =
     isClient && bookScript
       ? pickUsedFontFamily("auto", bookScript)
@@ -180,17 +186,19 @@ export function SettingsPanel({
           {fontGroups.map((group) => {
             if (group.id === "auto") {
               return (
-                <option key="auto" value="auto">
-                  {autoFamily
-                    ? `${t("fontAuto", undefined, locale)} · ${autoFamily}`
-                    : t("fontAuto", undefined, locale)}
-                </option>
+                <optgroup key="auto" label={t("fontAuto", undefined, locale)}>
+                  <option value="auto">
+                    {autoFamily
+                      ? `${t("fontAuto", undefined, locale)} · ${autoFamily}`
+                      : t("fontAuto", undefined, locale)}
+                  </option>
+                </optgroup>
               );
             }
             return (
               <optgroup key={group.id} label={groupLabel(group.id, locale)}>
                 {group.choiceIds.map((id) => {
-                  const choice = fontChoice(id);
+                  const choice = isClient ? bookFontChoice(id) : fontChoice(id);
                   return (
                     <option key={choice.id} value={choice.id}>
                       {choice.family}

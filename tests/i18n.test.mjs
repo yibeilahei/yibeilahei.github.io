@@ -154,7 +154,9 @@ assert.ok(localFontNamesForLang("km-KH").includes("Khmer UI"));
 }
 {
   const none = preferredFontGroups(undefined, undefined, null, null, true).map((g) => g.id);
-  assert.deepEqual(none, ["auto"]);
+  assert.equal(none[0], "auto");
+  assert.ok(none.includes("latin"));
+  assert.ok(none.includes("jp"));
 }
 {
   const ids = preferredFontGroups(undefined, undefined, "jp", null, true).map((g) => g.id);

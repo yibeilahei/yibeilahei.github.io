@@ -101,6 +101,12 @@ export function ConverterApp() {
     setEngineStatus({ text, kind });
   }, []);
 
+  const commitJobs = useCallback((update: (current: Job[]) => Job[]) => {
+    const next = update(jobsRef.current);
+    jobsRef.current = next;
+    setJobs(next);
+  }, []);
+
   useEffect(() => {
     const saved = loadSettings();
     settingsRef.current = saved;
@@ -442,7 +448,7 @@ export function ConverterApp() {
         activeIdRef.current = job.id;
         setActiveId(job.id);
       }
-      setJobs((prev) =>
+      commitJobs((prev) =>
         prev.map((j) =>
           j.id === job.id
             ? {
@@ -481,7 +487,7 @@ export function ConverterApp() {
               pct: ((i + p) / pending.length) * 100,
               text: t("pageProgress", { name: job.file.name, current: currentPage, total }),
             });
-            setJobs((prev) =>
+            commitJobs((prev) =>
               prev.map((j) =>
                 j.id === job.id ? { ...j, message: t("pageShort", { current: currentPage, total }) } : j,
               ),
@@ -490,7 +496,7 @@ export function ConverterApp() {
         });
         doneCountLocal += 1;
         lastFilename = result.filename;
-        setJobs((prev) =>
+        commitJobs((prev) =>
           prev.map((j) =>
             j.id === job.id
               ? {
@@ -528,7 +534,7 @@ export function ConverterApp() {
         const error = err as Error;
         if (error.name === "AbortError" || error.message === "Cancelled") {
           cancelled = true;
-          setJobs((prev) =>
+          commitJobs((prev) =>
             prev.map((j) =>
               j.id === job.id ? { ...j, status: "queued", message: t("cancelled") } : j,
             ),
@@ -539,7 +545,7 @@ export function ConverterApp() {
         console.error(err);
         const message = error.message || t("convertFailed");
         if (!firstError) firstError = message;
-        setJobs((prev) =>
+        commitJobs((prev) =>
           prev.map((j) =>
             j.id === job.id ? { ...j, status: "error", error: message, message } : j,
           ),
@@ -588,7 +594,7 @@ export function ConverterApp() {
       setProgress({ visible: true, pct: 100, text: t("failedCount", { n: pending.length - doneCountLocal }) });
       showToast(firstError, "error");
     }
-  }, [setStatus, showToast, showXtch]);
+  }, [commitJobs, setStatus, showToast, showXtch]);
 
   useEffect(() => {
     convertQueueRef.current = convertQueue;

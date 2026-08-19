@@ -1,5 +1,5 @@
-import { ar, de, es, fr, hi, id, it, nl, pl, pt, ru, th, tr, vi } from "./i18n.extra";
-import { am, bn, fa, gu, ha, mr, pa, sw, ta, te, tl, ur } from "./i18n.more";
+import { ar, de, es, fr, hi, id, it, nl, pl, pt, ru, th, tr, vi } from "./i18n.extra.ts";
+import { am, bn, fa, gu, ha, mr, pa, sw, ta, te, tl, ur } from "./i18n.more.ts";
 
 export type Locale =
   | "en"

@@ -19,6 +19,7 @@ type Props = {
 function predictedEngine(job: Job): LayoutLib | null {
   if (job.engine) return job.engine;
   if (job.writingMode === "auto" && job.detectedVertical == null) return null;
+  if (job.converter.id === "txt") return "foliate";
   return effectiveWritingMode(job.writingMode, job.detectedVertical) === "vertical"
     ? "foliate"
     : "crengine";

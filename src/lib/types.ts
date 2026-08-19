@@ -84,8 +84,7 @@ export type WritingMode = "auto" | "horizontal" | "vertical";
 export type ResolvedWritingMode = "horizontal" | "vertical";
 
 /**
- * Planned adapters. Match by magic later; only `epub` is registered now.
- * Do not feed TXT / MOBI / AZW / FB2 to CREngine.
+ * Planned adapters. EPUB and TXT are registered. Do not feed TXT / MOBI / AZW / FB2 to CREngine.
  */
 export type AdapterId = "epub" | "txt" | "mobi" | "fb2" | "cbz";
 
@@ -104,6 +103,8 @@ export type ConvertSettings = PersistSettings & {
   device: { w: number; h: number; id: string };
   writingMode: WritingMode;
   fontId: string;
+  /** TXT only. `"auto"` uses `detectTxtEncoding`. */
+  txtEncoding?: string;
 };
 
 /** Layout library actually used. Queue still shows this (not V/H yet). */
@@ -145,7 +146,7 @@ export type VerticalPager = {
 };
 
 export type BookSession = {
-  kind: "crengine" | "vertical";
+  kind: "crengine" | "vertical" | "horizontal";
   module?: CREngineModule;
   renderer?: EpubRenderer;
   pager?: VerticalPager;
@@ -191,6 +192,9 @@ export type Job = {
   error: string | null;
   writingMode: WritingMode;
   fontId: string;
+  /** TXT only. `"auto"` or a `TxtEncodingId`. */
+  txtEncoding: string;
+  detectedEncoding: string | null;
   /** Auto sniff (`textLooksVertical`). Override is `writingMode`. */
   detectedVertical: boolean | null;
   /** Script/fonts only — not Auto. */

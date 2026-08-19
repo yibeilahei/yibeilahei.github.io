@@ -10,6 +10,13 @@ import {
   SCRIPT_GROUP_LABELS,
   type ScriptId,
 } from "@/lib/fonts";
+import {
+  defaultEncodingForLanguage,
+  encodingLabel,
+  encodingsForMenu,
+  systemLanguage,
+  type TxtEncodingId,
+} from "@/lib/txt";
 import { resolveLocale, t, type MessageKey } from "@/lib/i18n";
 import type { PersistSettings, WritingMode } from "@/lib/types";
 
@@ -41,6 +48,10 @@ type Props = {
   bookFontId?: string;
   onBookWritingChange: (mode: WritingMode) => void;
   onBookFontChange: (fontId: string) => void;
+  bookIsTxt?: boolean;
+  txtEncoding?: string;
+  detectedEncoding?: string | null;
+  onTxtEncodingChange?: (encoding: string) => void;
   writingDisabled?: boolean;
 };
 
@@ -114,6 +125,10 @@ export function SettingsPanel({
   bookFontId = "auto",
   onBookWritingChange,
   onBookFontChange,
+  bookIsTxt = false,
+  txtEncoding = "auto",
+  detectedEncoding = null,
+  onTxtEncodingChange,
   writingDisabled,
 }: Props) {
   const locale = resolveLocale(settings.locale);
@@ -210,6 +225,46 @@ export function SettingsPanel({
           })}
         </select>
       </div>
+
+      {bookIsTxt ? (
+        <div className="setting-row">
+          <div>
+            <div className="setting-title">{t("encoding", undefined, locale)}</div>
+            <div className="setting-desc">
+              {txtEncoding === "auto" && detectedEncoding
+                ? t(
+                    "encodingThisFile",
+                    { name: encodingLabel(detectedEncoding as TxtEncodingId) },
+                    locale,
+                  )
+                : t("encodingDesc", undefined, locale)}
+            </div>
+          </div>
+          <select
+            className="field"
+            value={txtEncoding}
+            disabled={fontLocked}
+            onChange={(e) => onTxtEncodingChange?.(e.target.value)}
+          >
+            <option value="auto">
+              {detectedEncoding || isClient
+                ? `${t("encodingAuto", undefined, locale)} · ${encodingLabel(
+                    (detectedEncoding ||
+                      defaultEncodingForLanguage(systemLanguage())) as TxtEncodingId,
+                  )}`
+                : t("encodingAuto", undefined, locale)}
+            </option>
+            {encodingsForMenu(
+              isClient ? systemLanguage() : "en",
+              detectedEncoding as TxtEncodingId | null,
+            ).map((enc) => (
+              <option key={enc.id} value={enc.id}>
+                {enc.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       <div className="setting-row">
         <div>

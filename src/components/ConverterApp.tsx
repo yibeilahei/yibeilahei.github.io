@@ -19,7 +19,8 @@ import {
   uid,
 } from "@/lib/settings";
 import { convertWritingMode, isVerticalEpub } from "@/lib/detectVertical";
-import { detectScriptFromEpub, pickUsedFontFamily } from "@/lib/fonts";
+import { detectScript, detectScriptFromEpub, pickUsedFontFamily } from "@/lib/fonts";
+import { readTxtFile, sniffTxt, type TxtEncodingId } from "@/lib/txt";
 import {
   applyDocumentLocale,
   resolveLocale,
@@ -288,6 +289,24 @@ export function ConverterApp() {
     patchActiveBook({ fontId });
   }, [patchActiveBook]);
 
+  const updateTxtEncoding = useCallback(
+    (txtEncoding: string) => {
+      const job = jobsRef.current.find((j) => j.id === activeIdRef.current);
+      if (!job || job.txtEncoding === txtEncoding) return;
+      void (async () => {
+        let detectedScript = job.detectedScript;
+        try {
+          const { text } = await readTxtFile(job.file, txtEncoding as TxtEncodingId | "auto");
+          detectedScript = detectScript(text.slice(0, 12000));
+        } catch {
+          /* keep previous script */
+        }
+        patchActiveBook({ txtEncoding, detectedScript });
+      })();
+    },
+    [patchActiveBook],
+  );
+
   const addFiles = useCallback(
     (fileList: FileList) => {
       const files = Array.from(fileList);
@@ -314,6 +333,8 @@ export function ConverterApp() {
             error: null,
             writingMode: "auto",
             fontId: "auto",
+            txtEncoding: "auto",
+            detectedEncoding: null,
             detectedVertical: null,
             detectedScript: null,
             engine: null,
@@ -341,13 +362,22 @@ export function ConverterApp() {
           const detected = await Promise.all(
             nextJobs.map(async (job) => {
               try {
+                if (job.converter.id === "txt") {
+                  const sniff = await sniffTxt(job.file);
+                  return {
+                    id: job.id,
+                    vertical: sniff.vertical,
+                    script: sniff.script,
+                    encoding: sniff.encoding,
+                  };
+                }
                 const [vertical, script] = await Promise.all([
                   isVerticalEpub(job.file),
                   detectScriptFromEpub(job.file),
                 ]);
-                return { id: job.id, vertical, script };
+                return { id: job.id, vertical, script, encoding: null as string | null };
               } catch {
-                return { id: job.id, vertical: false, script: null };
+                return { id: job.id, vertical: false, script: null, encoding: null as string | null };
               }
             }),
           );
@@ -361,6 +391,7 @@ export function ConverterApp() {
                 ...j,
                 detectedVertical: vertical,
                 detectedScript: hit?.script ?? null,
+                detectedEncoding: hit?.encoding ?? j.detectedEncoding,
                 message:
                   j.status === "queued" && !j.result
                     ? t("writingSize", {
@@ -476,6 +507,7 @@ export function ConverterApp() {
             settingsRef.current,
             convertWritingMode(job.writingMode, job.detectedVertical),
             job.fontId,
+            job.txtEncoding,
           ),
           {
           signal: abort.signal,
@@ -751,6 +783,10 @@ export function ConverterApp() {
           bookFontId={activeJob?.fontId ?? "auto"}
           onBookWritingChange={updateBookWriting}
           onBookFontChange={updateBookFont}
+          bookIsTxt={activeJob?.converter.id === "txt"}
+          txtEncoding={activeJob?.txtEncoding ?? "auto"}
+          detectedEncoding={activeJob?.detectedEncoding ?? null}
+          onTxtEncodingChange={updateTxtEncoding}
           writingDisabled={converting}
         />
       </div>

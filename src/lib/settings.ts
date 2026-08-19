@@ -45,12 +45,14 @@ export function toConvertSettings(
   settings: PersistSettings,
   writingMode: WritingMode = "auto",
   fontId?: string,
+  txtEncoding?: string,
 ): ConvertSettings {
   const device = DEVICE_PROFILES[settings.deviceId] || DEVICE_PROFILES.X4;
   return {
     ...settings,
     fontId: fontId || "auto",
     writingMode,
+    txtEncoding: txtEncoding || "auto",
     device: { w: device.width, h: device.height, id: device.id },
   };
 }

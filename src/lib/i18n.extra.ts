@@ -130,6 +130,10 @@ export const fr: Dict = {
   crengineFailed: "Échec du chargement de CREngine",
   fontLoadJp: "Impossible de charger Noto Serif JP",
   fontLoadCjk: "Impossible de charger les polices CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const de: Dict = {
@@ -260,6 +264,10 @@ export const de: Dict = {
   crengineFailed: "CREngine konnte nicht geladen werden",
   fontLoadJp: "Noto Serif JP konnte nicht geladen werden",
   fontLoadCjk: "CJK-Schriften konnten nicht geladen werden",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const es: Dict = {
@@ -390,6 +398,10 @@ export const es: Dict = {
   crengineFailed: "No se pudo cargar CREngine",
   fontLoadJp: "No se pudo cargar Noto Serif JP",
   fontLoadCjk: "No se pudieron cargar las fuentes CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const pt: Dict = {
@@ -520,6 +532,10 @@ export const pt: Dict = {
   crengineFailed: "Falha ao carregar o CREngine",
   fontLoadJp: "Não foi possível carregar Noto Serif JP",
   fontLoadCjk: "Não foi possível carregar as fontes CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const it: Dict = {
@@ -650,6 +666,10 @@ export const it: Dict = {
   crengineFailed: "Caricamento CREngine non riuscito",
   fontLoadJp: "Impossibile caricare Noto Serif JP",
   fontLoadCjk: "Impossibile caricare i font CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const ru: Dict = {
@@ -780,6 +800,10 @@ export const ru: Dict = {
   crengineFailed: "Не удалось загрузить CREngine",
   fontLoadJp: "Не удалось загрузить Noto Serif JP",
   fontLoadCjk: "Не удалось загрузить шрифты CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const ar: Dict = {
@@ -910,6 +934,10 @@ export const ar: Dict = {
   crengineFailed: "فشل تحميل CREngine",
   fontLoadJp: "تعذّر تحميل Noto Serif JP",
   fontLoadCjk: "تعذّر تحميل خطوط CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const vi: Dict = {
@@ -1040,6 +1068,10 @@ export const vi: Dict = {
   crengineFailed: "Không tải được CREngine",
   fontLoadJp: "Không tải được Noto Serif JP",
   fontLoadCjk: "Không tải được phông CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const id: Dict = {
@@ -1170,6 +1202,10 @@ export const id: Dict = {
   crengineFailed: "Gagal memuat CREngine",
   fontLoadJp: "Tidak dapat memuat Noto Serif JP",
   fontLoadCjk: "Tidak dapat memuat huruf CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const th: Dict = {
@@ -1300,6 +1336,10 @@ export const th: Dict = {
   crengineFailed: "โหลด CREngine ไม่สำเร็จ",
   fontLoadJp: "โหลด Noto Serif JP ไม่ได้",
   fontLoadCjk: "โหลดแบบอักษร CJK ไม่ได้",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const nl: Dict = {
@@ -1430,6 +1470,10 @@ export const nl: Dict = {
   crengineFailed: "CREngine laden mislukt",
   fontLoadJp: "Kon Noto Serif JP niet laden",
   fontLoadCjk: "Kon CJK-lettertypen niet laden",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const pl: Dict = {
@@ -1560,6 +1604,10 @@ export const pl: Dict = {
   crengineFailed: "Nie udało się wczytać CREngine",
   fontLoadJp: "Nie udało się wczytać Noto Serif JP",
   fontLoadCjk: "Nie udało się wczytać czcionek CJK",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const tr: Dict = {
@@ -1690,6 +1738,10 @@ export const tr: Dict = {
   crengineFailed: "CREngine yüklenemedi",
   fontLoadJp: "Noto Serif JP yüklenemedi",
   fontLoadCjk: "CJK yazı tipleri yüklenemedi",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const hi: Dict = {
@@ -1820,5 +1872,9 @@ export const hi: Dict = {
   crengineFailed: "CREngine लोड नहीं हुआ",
   fontLoadJp: "Noto Serif JP लोड नहीं हुआ",
   fontLoadCjk: "CJK फ़ॉन्ट लोड नहीं हुए",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 

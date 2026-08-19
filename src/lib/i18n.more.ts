@@ -130,6 +130,10 @@ export const bn: Dict = {
   crengineFailed: "CREngine লোড হয়নি",
   fontLoadJp: "Noto Serif JP লোড হয়নি",
   fontLoadCjk: "CJK ফন্ট লোড হয়নি",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const ur: Dict = {
@@ -260,6 +264,10 @@ export const ur: Dict = {
   crengineFailed: "CREngine نہیں چلا",
   fontLoadJp: "Noto Serif JP نہیں چلا",
   fontLoadCjk: "CJK فونٹ نہیں چلے",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const mr: Dict = {
@@ -390,6 +398,10 @@ export const mr: Dict = {
   crengineFailed: "CREngine आले नाही",
   fontLoadJp: "Noto Serif JP आले नाही",
   fontLoadCjk: "CJK फॉन्ट आले नाहीत",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const te: Dict = {
@@ -520,6 +532,10 @@ export const te: Dict = {
   crengineFailed: "CREngine రాలేదు",
   fontLoadJp: "Noto Serif JP రాలేదు",
   fontLoadCjk: "CJK ఫాంట్లు రాలేదు",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const sw: Dict = {
@@ -650,6 +666,10 @@ export const sw: Dict = {
   crengineFailed: "CREngine haikupakia",
   fontLoadJp: "Noto Serif JP haikupakia",
   fontLoadCjk: "Fonti za CJK hazikupakia",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const ha: Dict = {
@@ -780,6 +800,10 @@ export const ha: Dict = {
   crengineFailed: "CREngine bai lodu ba",
   fontLoadJp: "Noto Serif JP bai lodu ba",
   fontLoadCjk: "Rubutun CJK ba su lodu ba",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const pa: Dict = {
@@ -910,6 +934,10 @@ export const pa: Dict = {
   crengineFailed: "CREngine ਨਹੀਂ ਚੱਲਿਆ",
   fontLoadJp: "Noto Serif JP ਨਹੀਂ ਚੱਲਿਆ",
   fontLoadCjk: "CJK ਫੌਂਟ ਨਹੀਂ ਚੱਲੇ",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const tl: Dict = {
@@ -1040,6 +1068,10 @@ export const tl: Dict = {
   crengineFailed: "Hindi na-load ang CREngine",
   fontLoadJp: "Hindi na-load ang Noto Serif JP",
   fontLoadCjk: "Hindi na-load ang CJK fonts",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const ta: Dict = {
@@ -1170,6 +1202,10 @@ export const ta: Dict = {
   crengineFailed: "CREngine ஏறவில்லை",
   fontLoadJp: "Noto Serif JP ஏறவில்லை",
   fontLoadCjk: "CJK எழுத்துருக்கள் ஏறவில்லை",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const fa: Dict = {
@@ -1300,6 +1336,10 @@ export const fa: Dict = {
   crengineFailed: "CREngine بار نشد",
   fontLoadJp: "Noto Serif JP بار نشد",
   fontLoadCjk: "قلم‌های CJK بار نشدند",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const am: Dict = {
@@ -1430,6 +1470,10 @@ export const am: Dict = {
   crengineFailed: "CREngine አልተጫነም",
   fontLoadJp: "Noto Serif JP አልተጫነም",
   fontLoadCjk: "የCJK ፊደላት አልተጫኑም",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };
 
 export const gu: Dict = {
@@ -1560,4 +1604,8 @@ export const gu: Dict = {
   crengineFailed: "CREngine લોડ ન થયું",
   fontLoadJp: "Noto Serif JP લોડ ન થયું",
   fontLoadCjk: "CJK ફોન્ટ લોડ ન થયા",
+  encoding: "Encoding",
+  encodingDesc: "Detected from the file. Change it if the text looks wrong.",
+  encodingAuto: "Auto",
+  encodingThisFile: "This file · {name}",
 };

@@ -5,9 +5,9 @@
  * Do not mount <foliate-view>. Do not teach this file 縦書き.
  */
 
-import { toCanvas } from "html-to-image";
 import { cssFontFamily, pickUsedFontFamily, systemFontFaceCss, type ScriptId } from "./fonts";
 import { t } from "./i18n";
+import { capPageCount, loadIframe, pagerHostCss, snapshotViewport, waitFrame } from "./snapshot";
 import type { Book, ConvertSettings, DocumentInfo, StatusFn, TocEntry, VerticalPager } from "./types";
 
 const systemCss = systemFontFaceCss();
@@ -128,30 +128,6 @@ function flattenToc(
   return out;
 }
 
-function waitFrame(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-}
-
-function loadIframe(iframe: HTMLIFrameElement, url: string): Promise<Document> {
-  return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error(t("sectionTimeout"))), 20000);
-    iframe.onload = () => {
-      window.clearTimeout(timer);
-      const doc = iframe.contentDocument;
-      if (!doc) {
-        reject(new Error(t("sectionMissing")));
-        return;
-      }
-      resolve(doc);
-    };
-    iframe.onerror = () => {
-      window.clearTimeout(timer);
-      reject(new Error(t("sectionFailed")));
-    };
-    iframe.src = url;
-  });
-}
-
 function wrapDocument(doc: Document, css: string): { flow: HTMLElement; vp: HTMLElement; clip: HTMLElement } {
   doc.querySelectorAll("script").forEach((n) => n.remove());
   const style = doc.createElement("style");
@@ -204,8 +180,9 @@ async function waitAssets(doc: Document) {
 
 function pageWindowsOf(flow: HTMLElement, clip: HTMLElement, pageW: number): PageWindow[] {
   flow.style.transform = "";
+  flow.style.left = "";
   const totalWidth = Math.max(flow.scrollWidth, clip.scrollWidth, pageW);
-  const count = Math.max(1, Math.round(totalWidth / pageW));
+  const count = capPageCount(Math.max(1, Math.round(totalWidth / pageW)));
   return Array.from({ length: count }, (_, page) => ({ shift: page * pageW }));
 }
 
@@ -214,20 +191,6 @@ function showPage(flow: HTMLElement, pages: PageWindow[], page: number) {
   // Inline left as well: html-to-image often drops transform and repeats page 1.
   flow.style.transform = `translateX(${-loc.shift}px)`;
   flow.style.left = `${-loc.shift}px`;
-}
-
-async function snapshotViewport(vp: HTMLElement, w: number, h: number): Promise<Uint8ClampedArray> {
-  const canvas = await toCanvas(vp, {
-    width: w,
-    height: h,
-    pixelRatio: 1,
-    backgroundColor: "#ffffff",
-    cacheBust: false,
-    fontEmbedCSS: systemCss,
-  });
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error(t("snapshotFailed"));
-  return new Uint8ClampedArray(ctx.getImageData(0, 0, w, h).data);
 }
 
 export async function createHorizontalPager(
@@ -250,19 +213,7 @@ export async function createHorizontalPager(
 
   const host = document.createElement("div");
   host.setAttribute("data-lazahata-horizontal", "1");
-  host.style.cssText = [
-    "position:fixed",
-    "left:0",
-    "top:0",
-    `width:${w}px`,
-    `height:${h}px`,
-    "overflow:hidden",
-    "contain:strict",
-    "opacity:0",
-    "z-index:-1",
-    "pointer-events:none",
-    "background:#fff",
-  ].join(";");
+  host.style.cssText = pagerHostCss(w, h);
 
   const iframe = document.createElement("iframe");
   iframe.setAttribute("sandbox", "allow-same-origin");

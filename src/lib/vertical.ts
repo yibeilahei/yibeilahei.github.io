@@ -4,7 +4,6 @@
  * ResizeObserver grows the iframe without bound and retriggers blob: loads.
  */
 
-import { toCanvas } from "html-to-image";
 import {
   cssFontFamily,
   detectCjkFaceFromEpub,
@@ -14,6 +13,20 @@ import {
   type CjkFace,
 } from "./fonts";
 import { t } from "./i18n";
+import {
+  capPageCount,
+  isWebKitEngine,
+  loadIframe,
+  pagerHostCss,
+  snapshotViewport,
+  waitFrame,
+} from "./snapshot";
+import {
+  clusterColumns,
+  fallbackPageWindows,
+  packColumnPages,
+  type ColumnRect,
+} from "./verticalPages";
 import type {
   Book,
   ConvertSettings,
@@ -24,7 +37,7 @@ import type {
 } from "./types";
 const systemCss = systemFontFaceCss();
 
-type PageWindow = { shift: number };
+type PageWindow = { shift: number; axis: "x" | "y"; width?: number };
 
 function metaString(value: unknown): string {
   if (!value) return "";
@@ -58,11 +71,17 @@ function bookCss(
   w: number,
   h: number,
   primary: CjkFace,
+  webkit: boolean,
 ): string {
   const fontSize = Number(settings.fontSize) || 34;
   const lineHeight = (Number(settings.lineHeight) || 120) / 100;
   const pitch = columnPitch(w, fontSize, lineHeight);
   const align = textAlignCss(Number(settings.textAlign));
+  // WebKit's CSS columns + vertical-rl overlap in one box and hang
+  // html-to-image. Use native tategaki (max-content, grow left) instead.
+  const flowBox = webkit
+    ? `width: max-content; max-width: none; max-height: ${h}px; column-width: auto; column-count: auto;`
+    : `width: ${w}px; max-width: none; max-height: ${h}px; column-width: ${h}px; column-gap: 0; column-fill: auto;`;
   return `
     ${fontCss}
     html, body {
@@ -107,9 +126,7 @@ function bookCss(
       font-size: ${fontSize}px;
       line-height: ${pitch}px;
       text-align: ${align};
-      column-width: ${h}px;
-      column-gap: 0;
-      column-fill: auto;
+      ${flowBox}
     }
     .lz-flow, .lz-flow *:not(ruby):not(rt):not(rtc):not(rp) {
       writing-mode: vertical-rl !important;
@@ -172,30 +189,6 @@ function flattenToc(
   };
   walk(items);
   return out;
-}
-
-function waitFrame(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-}
-
-function loadIframe(iframe: HTMLIFrameElement, url: string): Promise<Document> {
-  return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error(t("sectionTimeout"))), 20000);
-    iframe.onload = () => {
-      window.clearTimeout(timer);
-      const doc = iframe.contentDocument;
-      if (!doc) {
-        reject(new Error(t("sectionMissing")));
-        return;
-      }
-      resolve(doc);
-    };
-    iframe.onerror = () => {
-      window.clearTimeout(timer);
-      reject(new Error(t("sectionFailed")));
-    };
-    iframe.src = url;
-  });
 }
 
 function wrapDocument(doc: Document, css: string): { flow: HTMLElement; vp: HTMLElement; clip: HTMLElement } {
@@ -262,30 +255,128 @@ async function waitAssets(doc: Document) {
   await waitFrame();
 }
 
-function pageWindowsOf(flow: HTMLElement, clip: HTMLElement, pageH: number): PageWindow[] {
+function isRubyAnnotation(node: Node): boolean {
+  let el = node.parentElement;
+  while (el) {
+    const tag = el.tagName;
+    if (tag === "RT" || tag === "RP" || tag === "RTC") return true;
+    if (tag === "RUBY") break;
+    el = el.parentElement;
+  }
+  return false;
+}
+
+function rubyIdOf(node: Node, flow: HTMLElement): string | undefined {
+  let el = node instanceof Element ? node : node.parentElement;
+  while (el && el !== flow) {
+    if (el.tagName === "RUBY") {
+      let id = el.getAttribute("data-lz-ruby");
+      if (!id) {
+        id = "rb-" + Math.random().toString(36).slice(2, 9);
+        el.setAttribute("data-lz-ruby", id);
+      }
+      return id;
+    }
+    el = el.parentElement;
+  }
+  return undefined;
+}
+
+function collectColumnRects(flow: HTMLElement): ColumnRect[] {
+  const doc = flow.ownerDocument;
+  const rects: ColumnRect[] = [];
+  const range = doc.createRange();
+  const walker = doc.createTreeWalker(flow, NodeFilter.SHOW_TEXT);
+  let node: Node | null = walker.nextNode();
+  while (node) {
+    if (!isRubyAnnotation(node) && node.textContent && node.textContent.trim()) {
+      range.selectNodeContents(node);
+      const list = range.getClientRects();
+      const group = rubyIdOf(node, flow);
+      for (let i = 0; i < list.length; i++) {
+        const r = list[i];
+        if (r.width > 0.5 && r.height > 0.5) {
+          rects.push({ left: r.left, right: r.right, group });
+        }
+      }
+    }
+    node = walker.nextNode();
+  }
+  const rubies = flow.querySelectorAll("ruby");
+  for (let i = 0; i < rubies.length; i++) {
+    const ruby = rubies[i];
+    const group = rubyIdOf(ruby, flow);
+    const list = ruby.getClientRects();
+    for (let j = 0; j < list.length; j++) {
+      const r = list[j];
+      if (r.width > 0.5 && r.height > 0.5) {
+        rects.push({ left: r.left, right: r.right, group });
+      }
+    }
+  }
+  const replaced = flow.querySelectorAll("img, svg, video, canvas");
+  for (let i = 0; i < replaced.length; i++) {
+    const r = replaced[i].getBoundingClientRect();
+    if (r.width > 0.5 && r.height > 0.5) {
+      rects.push({ left: r.left, right: r.right });
+    }
+  }
+  return rects;
+}
+
+function pageWindowsOf(
+  flow: HTMLElement,
+  clip: HTMLElement,
+  pageW: number,
+  pageH: number,
+  pitch: number,
+): PageWindow[] {
   flow.style.transform = "";
+  clip.style.width = "";
+  void flow.offsetWidth;
+  void clip.offsetHeight;
+
+  if (isWebKitEngine()) {
+    const clipRight = clip.getBoundingClientRect().right;
+    const columns = clusterColumns(collectColumnRects(flow), pitch);
+    if (columns.length) {
+      const packed = packColumnPages(columns, Math.max(1, pageW), clipRight);
+      return packed.slice(0, capPageCount(packed.length)).map((page) => ({
+        shift: page.shift,
+        axis: "x" as const,
+        width: page.width,
+      }));
+    }
+    const totalWidth = Math.max(flow.scrollWidth, clip.scrollWidth, pageW);
+    const fallback = fallbackPageWindows(totalWidth, pageW);
+    return fallback.slice(0, capPageCount(fallback.length)).map((page) => ({
+      shift: page.shift,
+      axis: "x" as const,
+      width: page.width,
+    }));
+  }
+
+  const totalWidth = Math.max(flow.scrollWidth, clip.scrollWidth, pageW);
   const totalHeight = Math.max(flow.scrollHeight, clip.scrollHeight, pageH);
-  const count = Math.max(1, Math.round(totalHeight / pageH));
-  return Array.from({ length: count }, (_, page) => ({ shift: page * pageH }));
+  const xPages = Math.max(1, Math.round(totalWidth / pageW));
+  const yPages = Math.max(1, Math.round(totalHeight / pageH));
+  if (xPages >= yPages && totalWidth > pageW + 2) {
+    const count = capPageCount(xPages);
+    return Array.from({ length: count }, (_, page) => ({ shift: page * pageW, axis: "x" as const }));
+  }
+  const count = capPageCount(yPages);
+  return Array.from({ length: count }, (_, page) => ({ shift: page * pageH, axis: "y" as const }));
 }
 
-function showPage(flow: HTMLElement, pages: PageWindow[], page: number) {
-  const loc = pages[Math.max(0, Math.min(pages.length - 1, page))] || { shift: 0 };
-  flow.style.transform = `translateY(${-loc.shift}px)`;
-}
-
-async function snapshotViewport(vp: HTMLElement, w: number, h: number): Promise<Uint8ClampedArray> {
-  const canvas = await toCanvas(vp, {
-    width: w,
-    height: h,
-    pixelRatio: 1,
-    backgroundColor: "#ffffff",
-    cacheBust: false,
-    fontEmbedCSS: systemCss,
-  });
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error(t("snapshotFailed"));
-  return new Uint8ClampedArray(ctx.getImageData(0, 0, w, h).data);
+function showPage(flow: HTMLElement, clip: HTMLElement, pages: PageWindow[], page: number) {
+  const loc = pages[Math.max(0, Math.min(pages.length - 1, page))] || { shift: 0, axis: "y" as const };
+  if (loc.axis === "x") {
+    flow.style.transform = `translateX(${loc.shift}px)`;
+    clip.style.width = loc.width ? `${loc.width}px` : "";
+  } else {
+    flow.style.transform = `translateY(${-loc.shift}px)`;
+    clip.style.width = "";
+  }
 }
 
 export async function createVerticalPager(
@@ -302,6 +393,7 @@ export async function createVerticalPager(
   usedFontFamily: string;
 }> {
   const { w, h } = settings.device;
+  const pitch = columnPitch(w, Number(settings.fontSize) || 34, (Number(settings.lineHeight) || 120) / 100);
   if (onStatus) onStatus(t("openingFoliate"));
   const cjkFace: CjkFace | null = isCjkFace(book.script)
     ? book.script
@@ -309,23 +401,11 @@ export async function createVerticalPager(
       ? await detectCjkFaceFromEpub(opts.file)
       : null;
   const usedFontFamily = pickUsedFontFamily(settings.fontId, cjkFace);
-  const css = bookCss(settings, systemCss, w, h, cjkFace || "jp");
+  const css = bookCss(settings, systemCss, w, h, cjkFace || "jp", isWebKitEngine());
 
   const host = document.createElement("div");
   host.setAttribute("data-lazahata-foliate", "1");
-  host.style.cssText = [
-    "position:fixed",
-    "left:0",
-    "top:0",
-    `width:${w}px`,
-    `height:${h}px`,
-    "overflow:hidden",
-    "contain:strict",
-    "opacity:0",
-    "z-index:-1",
-    "pointer-events:none",
-    "background:#fff",
-  ].join(";");
+  host.style.cssText = pagerHostCss(w, h);
 
   const iframe = document.createElement("iframe");
   iframe.setAttribute("sandbox", "allow-same-origin");
@@ -354,7 +434,7 @@ export async function createVerticalPager(
   let currentFlow: HTMLElement | null = null;
   let currentVp: HTMLElement | null = null;
   let currentClip: HTMLElement | null = null;
-  let currentPages: PageWindow[] = [{ shift: 0 }];
+  let currentPages: PageWindow[] = [{ shift: 0, axis: "y" }];
   const sectionPages = new Map<number, PageWindow[]>();
 
   async function openSection(index: number) {
@@ -370,7 +450,7 @@ export async function createVerticalPager(
     currentVp = wrapped.vp;
     currentClip = wrapped.clip;
     await waitAssets(doc);
-    currentPages = sectionPages.get(index) || pageWindowsOf(currentFlow, currentClip, h);
+    currentPages = sectionPages.get(index) || pageWindowsOf(currentFlow, currentClip, w, h, pitch);
     sectionPages.set(index, currentPages);
     currentIndex = index;
     return { flow: currentFlow, vp: currentVp, clip: currentClip, pages: currentPages };
@@ -412,8 +492,8 @@ export async function createVerticalPager(
     const key = loc.index + ":" + loc.page;
     const hit = cache.get(key);
     if (hit) return hit;
-    const { flow, vp, pages } = await openSection(loc.index);
-    showPage(flow, pages, loc.page);
+    const { flow, vp, clip, pages } = await openSection(loc.index);
+    showPage(flow, clip, pages, loc.page);
     await waitFrame();
     const copy = await snapshotViewport(vp, w, h);
     cache.set(key, copy);

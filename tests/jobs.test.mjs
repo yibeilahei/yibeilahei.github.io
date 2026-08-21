@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { axisFromChoice, createJob, initialJobState, jobsReducer, pendingJobs } from "../src/lib/jobs.ts";
+import { axisFromChoice, createJob, initialJobState, jobsReducer, pendingJobs } from "../src/lib/jobs/store.ts";
 
 assert.equal(axisFromChoice("vertical", "horizontal"), "vertical");
 assert.equal(axisFromChoice("horizontal", "vertical"), "horizontal");

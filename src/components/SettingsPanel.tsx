@@ -16,7 +16,7 @@ import {
   encodingsForMenu,
   systemLanguage,
   type TxtEncodingId,
-} from "@/lib/txt";
+} from "@/lib/adapters/txt";
 import { resolveLocale, t, type MessageKey } from "@/lib/i18n";
 import type { PersistSettings, ResolvedWritingMode, WritingMode } from "@/lib/types";
 

@@ -8,8 +8,8 @@
  */
 
 import { toCanvas } from "html-to-image";
-import { systemFontFaceCss } from "./fonts";
-import { t } from "./i18n";
+import { systemFontFaceCss } from "../fonts";
+import { t } from "../i18n";
 
 const systemCss = systemFontFaceCss();
 const MAX_SECTION_PAGES = 5000;

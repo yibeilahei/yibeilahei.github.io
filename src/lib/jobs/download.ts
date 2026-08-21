@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import type { Job } from "./types";
+import type { Job } from "../types";
 
 function toDownloadBlob(bytes: Blob | ArrayBuffer | Uint8Array): Blob {
   if (bytes instanceof Blob) return bytes;

@@ -1,4 +1,4 @@
-/** Font stacks and optional CDN/local bytes for CSS pagers. */
+/** Font stacks and CSS family for pagers. */
 
 import JSZip from "jszip";
 
@@ -257,20 +257,6 @@ export function scriptFromLang(lang?: string): ScriptId {
   if (/^(am|ti)([-]|$)/.test(lower)) return "ethi";
   if (/^(bo|dz)([-]|$)/.test(lower)) return "tibt";
   return "latin";
-}
-
-export function browserLanguages(): string[] {
-  if (typeof navigator === "undefined") return [];
-  const out: string[] = [];
-  const add = (value?: string) => {
-    const lang = String(value || "").trim();
-    if (lang && !out.includes(lang)) out.push(lang);
-  };
-  if (Array.isArray(navigator.languages)) {
-    for (const lang of navigator.languages) add(lang);
-  }
-  add(navigator.language);
-  return out;
 }
 
 export function scriptsForEngine(
@@ -534,18 +520,6 @@ export function preferredFontGroups(
   return [...auto, ...first, ...rest];
 }
 
-const bytesCache = new Map<string, Uint8Array>();
-
-type LocalFontData = {
-  family: string;
-  fullName: string;
-  postscriptName: string;
-  style: string;
-  blob: () => Promise<Blob>;
-};
-
-let localFontsPromise: Promise<LocalFontData[] | null> | null = null;
-
 export function normalizeFontId(value: unknown): string {
   if (typeof value !== "string" || !value) return "auto";
   if (FONT_CHOICES.some((c) => c.id === value)) return value;
@@ -684,188 +658,6 @@ export async function detectCjkFaceFromEpub(file: File): Promise<CjkFace | null>
   return isCjkFace(script) ? script : null;
 }
 
-async function listLocalFonts(): Promise<LocalFontData[] | null> {
-  if (typeof window === "undefined") return null;
-  if (localFontsPromise) return localFontsPromise;
-  const query = (window as Window & { queryLocalFonts?: () => Promise<LocalFontData[]> }).queryLocalFonts;
-  if (typeof query !== "function") {
-    localFontsPromise = Promise.resolve(null);
-    return localFontsPromise;
-  }
-  localFontsPromise = query()
-    .then((fonts) => fonts || null)
-    .catch(() => null);
-  return localFontsPromise;
-}
-
-function styleIsRegular(style: string): boolean {
-  const s = (style || "regular").toLowerCase();
-  return s === "regular" || s === "normal" || s === "roman" || s === "";
-}
-
-async function loadLocalFontBytes(names: string[]): Promise<{ family: string; bytes: Uint8Array } | null> {
-  const fonts = await listLocalFonts();
-  if (!fonts?.length || !names.length) return null;
-  const want = names.map((n) => n.toLowerCase());
-  const match = (font: LocalFontData) => {
-    const family = (font.family || "").toLowerCase();
-    const full = (font.fullName || "").toLowerCase();
-    return want.some((n) => family === n || full === n || full.startsWith(n + " "));
-  };
-  const hit =
-    fonts.find((f) => match(f) && styleIsRegular(f.style)) || fonts.find((f) => match(f));
-  if (!hit) return null;
-  const blob = await hit.blob();
-  return { family: hit.family || names[0], bytes: new Uint8Array(await blob.arrayBuffer()) };
-}
-
-export async function loadFontBytes(spec: FontSpec): Promise<Uint8Array> {
-  const hit = bytesCache.get(spec.url);
-  if (hit) return hit;
-  const resp = await fetch(spec.url);
-  if (!resp.ok) throw new Error("HTTP " + resp.status);
-  const bytes = new Uint8Array(await resp.arrayBuffer());
-  bytesCache.set(spec.url, bytes);
-  return bytes;
-}
-
-export type LoadedFace = {
-  family: string;
-  file: string;
-  bytes: Uint8Array;
-};
-
-export async function resolveFaceBytes(
-  choice: FontChoice,
-  onStatus?: (name: string) => void,
-): Promise<LoadedFace | null> {
-  if (choice.locals.length) {
-    try {
-      if (onStatus) onStatus(choice.family);
-      const local = await loadLocalFontBytes(choice.locals);
-      if (local) {
-        return {
-          family: local.family,
-          file: choice.family.replace(/\s+/g, "") + ".ttf",
-          bytes: local.bytes,
-        };
-      }
-    } catch {
-      /* fall through */
-    }
-  }
-  if (choice.cdn) {
-    if (onStatus) onStatus(choice.cdn.family);
-    const bytes = await loadFontBytes(choice.cdn);
-    return { family: choice.cdn.family, file: choice.cdn.file, bytes };
-  }
-  return null;
-}
-
-export async function fontsForEngine(
-  fontId: string | undefined,
-  detected: ScriptId | null,
-  onStatus?: (name: string) => void,
-  langs?: string[],
-): Promise<{ faces: LoadedFace[]; usedFamily: string }> {
-  const loaded: LoadedFace[] = [];
-  const seen = new Set<string>();
-  const systemLangs = langs ?? browserLanguages();
-
-  async function tryAdd(item: FontChoice | undefined, allowCdn: boolean): Promise<boolean> {
-    if (!item) return false;
-    const probe = allowCdn ? item : { ...item, cdn: undefined };
-    try {
-      const face = await resolveFaceBytes(probe, onStatus);
-      if (!face || seen.has(face.file)) return false;
-      seen.add(face.file);
-      loaded.push(face);
-      return true;
-    } catch (err) {
-      console.warn("Font resolve failed:", item.family, err);
-      return false;
-    }
-  }
-
-  async function tryLocalNames(names: string[], label?: string): Promise<boolean> {
-    const unique = names.filter((name, i) => name && names.indexOf(name) === i);
-    if (!unique.length) return false;
-    return tryAdd(
-      {
-        id: "local-" + (label || unique[0]),
-        family: unique[0],
-        locals: unique,
-        group: "latin",
-      },
-      false,
-    );
-  }
-
-  async function ensureScript(script: ScriptId): Promise<void> {
-    const stack = SYSTEM_STACKS[script] || [];
-    if (loaded.some((face) => stack.includes(face.family))) return;
-    if (await tryLocalNames(stack, script)) return;
-
-    const ids = FONT_GROUPS.find((g) => g.id === script)?.choiceIds || [];
-    for (const id of ids) {
-      const opt = fontChoice(id);
-      if (opt.cdn) continue;
-      if (await tryAdd(opt, false)) return;
-    }
-
-    const cdn = SCRIPT_CDN[script] || (isCjkFace(script) ? CJK_FONTS[script] : undefined);
-    if (!cdn) return;
-    await tryAdd(
-      {
-        id: cdn.id,
-        family: cdn.family,
-        locals: [cdn.family],
-        group: script,
-        cdn,
-      },
-      true,
-    );
-  }
-
-  const choice = fontChoice(fontId);
-  if (choice.id !== "auto") {
-    await tryAdd(choice, true);
-  } else if (
-    !(await tryAdd(fontChoice("georgia"), false)) &&
-    !(await tryAdd(fontChoice("times"), false))
-  ) {
-    await tryAdd(fontChoice("literata"), true);
-  }
-
-  for (const script of scriptsForEngine(fontId, detected, systemLangs)) {
-    await ensureScript(script);
-  }
-
-  const unknownSystemLang = systemLangs.find(
-    (lang) => scriptFromLang(lang) === "latin" && !isLatinLang(lang),
-  );
-  if (unknownSystemLang) {
-    await tryLocalNames(
-      [
-        "Nirmala UI",
-        "Leelawadee UI",
-        "Ebrima",
-        "Gadugi",
-        "Sylfaen",
-        "Segoe UI",
-        "MV Boli",
-        "Euphemia",
-      ],
-      "system-coverage",
-    );
-  }
-  return { faces: loaded, usedFamily: usedFamilyFromLoaded(fontId, detected, loaded) };
-}
-
-export function enginePrimaryFamily(fontId: string | undefined, detected: ScriptId | null): string {
-  return pickUsedFontFamily(fontId, detected);
-}
-
 function firstAvailableFont(names: string[]): string | null {
   if (!names.length) return null;
   if (typeof document === "undefined") return names[0];
@@ -900,37 +692,4 @@ export function pickUsedFontFamily(fontId?: string, detected?: ScriptId | null):
     return firstAvailableFont([...SYSTEM_STACKS[detected], ...extra]) || SYSTEM_STACKS[detected][0];
   }
   return firstAvailableFont([...LATIN_STACK, LATIN_FONT.family]) || "Georgia";
-}
-
-export function usedFamilyFromLoaded(
-  fontId: string | undefined,
-  detected: ScriptId | null,
-  loaded: LoadedFace[],
-): string {
-  const choice = fontChoice(fontId);
-  if (choice.id !== "auto") {
-    const hit = loaded.find(
-      (f) => f.family === choice.family || choice.locals.includes(f.family),
-    );
-    return hit?.family || loaded[0]?.family || pickUsedFontFamily(fontId, detected);
-  }
-  if (detected && detected !== "latin") {
-    const skipLatin = new Set(LATIN_STACK.concat(LATIN_FONT.family));
-    const scriptFace = loaded.find((f) => !skipLatin.has(f.family));
-    return scriptFace?.family || loaded[0]?.family || pickUsedFontFamily(fontId, detected);
-  }
-  return loaded[0]?.family || pickUsedFontFamily(fontId, detected);
-}
-
-export function fallbackFaceList(): string {
-  const seen = new Set<string>();
-  const names: string[] = [];
-  for (const list of Object.values(SYSTEM_STACKS)) {
-    for (const name of list) {
-      if (seen.has(name)) continue;
-      seen.add(name);
-      names.push(name);
-    }
-  }
-  return names.join(", ");
 }

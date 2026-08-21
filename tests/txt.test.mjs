@@ -8,7 +8,7 @@ import {
   resolveTxtEncoding,
   titleFromFilename,
   txtToHtml,
-} from "../src/lib/txt.ts";
+} from "../src/lib/adapters/txt.ts";
 import { detectedVerticalFromSample } from "../src/lib/detectVertical.ts";
 
 const hello = new TextEncoder().encode("Hello\n\nWorld");

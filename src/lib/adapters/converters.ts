@@ -3,12 +3,11 @@
  * Auto is markup sample → textLooksVertical.
  */
 
-import { encodeXthPage, buildXtchContainer, outputNameFromSource } from "./xtch";
-import { pagerKind, sampleEpubMarkup } from "./detectVertical";
-import { detectScriptFromEpub } from "./fonts";
-import { t } from "./i18n";
+import { encodeXthPage, buildXtchContainer, outputNameFromSource } from "../xtch";
+import { pagerKind, sampleEpubMarkup } from "../detectVertical";
+import { detectScriptFromEpub } from "../fonts";
+import { t } from "../i18n";
 import type {
-  AdapterSniff,
   Book,
   BookSession,
   Converter,
@@ -16,7 +15,7 @@ import type {
   ConvertResult,
   ConvertSettings,
   StatusFn,
-} from "./types";
+} from "../types";
 
 const converters: Converter[] = [];
 
@@ -73,6 +72,59 @@ function assertNotCancelled(signal?: AbortSignal) {
 async function renderSessionPage(session: BookSession, pageIndex: number) {
   if (session.pager) return session.pager.renderPage(pageIndex);
   throw new Error(t("rendererNotReady"));
+}
+
+async function sessionFromBook(
+  converter: Converter,
+  book: Book,
+  settings: ConvertSettings,
+  onStatus?: StatusFn,
+  opts?: { maxPages?: number; titleFallback?: string; file?: File },
+): Promise<BookSession> {
+  const { w, h } = settings.device;
+  const kind = pagerKind(settings.writingMode);
+  if (kind === "vertical") {
+    if (onStatus) onStatus(t("verticalFoliate"));
+    const { createVerticalPager } = await import("../pagers/vertical");
+    const vertical = await createVerticalPager(
+      book,
+      { ...settings, writingMode: "vertical" },
+      onStatus,
+      opts,
+    );
+    return {
+      kind: "vertical",
+      pager: vertical.pager,
+      pageCount: vertical.pageCount,
+      info: vertical.info,
+      toc: vertical.toc,
+      width: w,
+      height: h,
+      converter,
+      truncated: vertical.truncated,
+      usedFontFamily: vertical.usedFontFamily,
+    };
+  }
+  if (onStatus) onStatus(t("horizontalFoliate"));
+  const { createHorizontalPager } = await import("../pagers/horizontal");
+  const horizontal = await createHorizontalPager(
+    book,
+    { ...settings, writingMode: "horizontal" },
+    onStatus,
+    { maxPages: opts?.maxPages, titleFallback: opts?.titleFallback },
+  );
+  return {
+    kind: "horizontal",
+    pager: horizontal.pager,
+    pageCount: horizontal.pageCount,
+    info: horizontal.info,
+    toc: horizontal.toc,
+    width: w,
+    height: h,
+    converter,
+    truncated: horizontal.truncated,
+    usedFontFamily: horizontal.usedFontFamily,
+  };
 }
 
 async function convertSession(
@@ -135,68 +187,17 @@ const EpubConverter: Converter = {
   },
 
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
-    const { w, h } = settings.device;
-    const layout = pagerKind(settings.writingMode);
-    if (layout === "vertical") {
-      if (onStatus) onStatus(t("verticalFoliate"));
-      const [{ createVerticalPager }, { makeBook }] = await Promise.all([
-        import("./vertical"),
-        import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<Book> }>,
-      ]);
-      const book = await makeBook(file);
-      const vertical = await createVerticalPager(
-        book,
-        { ...settings, writingMode: "vertical" },
-        onStatus,
-        {
-          maxPages: opts?.maxPages,
-          titleFallback: file.name.replace(/\.epub$/i, ""),
-          file,
-        },
-      );
-      return {
-        kind: "vertical" as const,
-        pager: vertical.pager,
-        pageCount: vertical.pageCount,
-        info: vertical.info,
-        toc: vertical.toc,
-        width: w,
-        height: h,
-        converter: this,
-        truncated: vertical.truncated,
-        usedFontFamily: vertical.usedFontFamily,
-      };
-    }
-
-    if (onStatus) onStatus(t("horizontalFoliate"));
-    const [{ createHorizontalPager }, { makeBook }] = await Promise.all([
-      import("./horizontal"),
+    const [{ makeBook }, sniff] = await Promise.all([
       import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<Book> }>,
+      this.sniff(file),
     ]);
     const book = await makeBook(file);
-    const sniff = await this.sniff(file);
     if (sniff.script) book.script = sniff.script;
-    const horizontal = await createHorizontalPager(
-      book,
-      { ...settings, writingMode: "horizontal" },
-      onStatus,
-      {
-        maxPages: opts?.maxPages,
-        titleFallback: file.name.replace(/\.epub$/i, ""),
-      },
-    );
-    return {
-      kind: "horizontal" as const,
-      pager: horizontal.pager,
-      pageCount: horizontal.pageCount,
-      info: horizontal.info,
-      toc: horizontal.toc,
-      width: w,
-      height: h,
-      converter: this,
-      truncated: horizontal.truncated,
-      usedFontFamily: horizontal.usedFontFamily,
-    };
+    return sessionFromBook(this, book, settings, onStatus, {
+      maxPages: opts?.maxPages,
+      titleFallback: file.name.replace(/\.epub$/i, ""),
+      file,
+    });
   },
 
   renderPage: renderSessionPage,
@@ -221,47 +222,12 @@ const TxtConverter: Converter = {
   },
 
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
-    const { w, h } = settings.device;
-    if (onStatus) onStatus(t("buildingPreview"));
     const { bookFromTxt } = await import("./txt");
     const book = await bookFromTxt(file, settings.txtEncoding || "auto");
-    const titleFallback = file.name.replace(/\.txt$/i, "");
-    if (pagerKind(settings.writingMode) === "vertical") {
-      const { createVerticalPager } = await import("./vertical");
-      const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
-        maxPages: opts?.maxPages,
-        titleFallback,
-      });
-      return {
-        kind: "vertical" as const,
-        pager: vertical.pager,
-        pageCount: vertical.pageCount,
-        info: vertical.info,
-        toc: vertical.toc,
-        width: w,
-        height: h,
-        converter: this,
-        truncated: vertical.truncated,
-        usedFontFamily: vertical.usedFontFamily,
-      };
-    }
-    const { createHorizontalPager } = await import("./horizontal");
-    const horizontal = await createHorizontalPager(book, settings, onStatus, {
+    return sessionFromBook(this, book, settings, onStatus, {
       maxPages: opts?.maxPages,
-      titleFallback,
+      titleFallback: file.name.replace(/\.txt$/i, ""),
     });
-    return {
-      kind: "horizontal" as const,
-      pager: horizontal.pager,
-      pageCount: horizontal.pageCount,
-      info: horizontal.info,
-      toc: horizontal.toc,
-      width: w,
-      height: h,
-      converter: this,
-      truncated: horizontal.truncated,
-      usedFontFamily: horizontal.usedFontFamily,
-    };
   },
 
   renderPage: renderSessionPage,
@@ -286,47 +252,12 @@ const MobiConverter: Converter = {
   },
 
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
-    const { w, h } = settings.device;
-    if (onStatus) onStatus(t("buildingPreview"));
     const { openMobiBook } = await import("./mobi");
     const book = await openMobiBook(file);
-    const titleFallback = file.name.replace(/\.(mobi|azw|azw3)$/i, "");
-    if (pagerKind(settings.writingMode) === "vertical") {
-      const { createVerticalPager } = await import("./vertical");
-      const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
-        maxPages: opts?.maxPages,
-        titleFallback,
-      });
-      return {
-        kind: "vertical" as const,
-        pager: vertical.pager,
-        pageCount: vertical.pageCount,
-        info: vertical.info,
-        toc: vertical.toc,
-        width: w,
-        height: h,
-        converter: this,
-        truncated: vertical.truncated,
-        usedFontFamily: vertical.usedFontFamily,
-      };
-    }
-    const { createHorizontalPager } = await import("./horizontal");
-    const horizontal = await createHorizontalPager(book, settings, onStatus, {
+    return sessionFromBook(this, book, settings, onStatus, {
       maxPages: opts?.maxPages,
-      titleFallback,
+      titleFallback: file.name.replace(/\.(mobi|azw|azw3)$/i, ""),
     });
-    return {
-      kind: "horizontal" as const,
-      pager: horizontal.pager,
-      pageCount: horizontal.pageCount,
-      info: horizontal.info,
-      toc: horizontal.toc,
-      width: w,
-      height: h,
-      converter: this,
-      truncated: horizontal.truncated,
-      usedFontFamily: horizontal.usedFontFamily,
-    };
   },
 
   renderPage: renderSessionPage,
@@ -358,47 +289,12 @@ const Fb2Converter: Converter = {
   },
 
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
-    const { w, h } = settings.device;
-    if (onStatus) onStatus(t("buildingPreview"));
     const { openFb2Book } = await import("./fb2");
     const book = await openFb2Book(file);
-    const titleFallback = file.name.replace(/\.(fb2\.zip|fb2|fbz)$/i, "");
-    if (pagerKind(settings.writingMode) === "vertical") {
-      const { createVerticalPager } = await import("./vertical");
-      const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
-        maxPages: opts?.maxPages,
-        titleFallback,
-      });
-      return {
-        kind: "vertical" as const,
-        pager: vertical.pager,
-        pageCount: vertical.pageCount,
-        info: vertical.info,
-        toc: vertical.toc,
-        width: w,
-        height: h,
-        converter: this,
-        truncated: vertical.truncated,
-        usedFontFamily: vertical.usedFontFamily,
-      };
-    }
-    const { createHorizontalPager } = await import("./horizontal");
-    const horizontal = await createHorizontalPager(book, settings, onStatus, {
+    return sessionFromBook(this, book, settings, onStatus, {
       maxPages: opts?.maxPages,
-      titleFallback,
+      titleFallback: file.name.replace(/\.(fb2\.zip|fb2|fbz)$/i, ""),
     });
-    return {
-      kind: "horizontal" as const,
-      pager: horizontal.pager,
-      pageCount: horizontal.pageCount,
-      info: horizontal.info,
-      toc: horizontal.toc,
-      width: w,
-      height: h,
-      converter: this,
-      truncated: horizontal.truncated,
-      usedFontFamily: horizontal.usedFontFamily,
-    };
   },
 
   renderPage: renderSessionPage,

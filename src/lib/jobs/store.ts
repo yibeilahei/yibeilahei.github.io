@@ -6,7 +6,7 @@
  * markup result for the settings override line.
  */
 
-import type { ScriptId } from "./fonts";
+import type { ScriptId } from "../fonts";
 import type {
   ConvertResult,
   Converter,
@@ -14,7 +14,7 @@ import type {
   JobUsedSettings,
   ResolvedWritingMode,
   WritingMode,
-} from "./types";
+} from "../types";
 
 export type JobState = {
   jobs: Job[];

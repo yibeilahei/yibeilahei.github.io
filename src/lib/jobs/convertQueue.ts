@@ -4,18 +4,18 @@
  */
 
 import { downloadBytes, downloadJobs } from "./download";
-import { axisFromSample } from "./detectVertical";
-import { pickUsedFontFamily } from "./fonts";
-import { t } from "./i18n";
-import { pendingJobs, type JobAction, type JobState } from "./jobs";
-import { formatSize, toConvertSettings } from "./settings";
+import { axisFromSample } from "../detectVertical";
+import { pickUsedFontFamily } from "../fonts";
+import { t } from "../i18n";
+import { pendingJobs, type JobAction, type JobState } from "./store";
+import { formatSize, toConvertSettings } from "../settings";
 import type {
   ConvertResult,
   Job,
   PersistSettings,
   ResolvedWritingMode,
   ToastState,
-} from "./types";
+} from "../types";
 
 export type ConvertQueueOpts = { maxPages?: number; download?: boolean };
 

@@ -3,10 +3,10 @@
  * Foliate MOBI.open → Book. Sniff samples first sections only.
  */
 
-import { detectScript, scriptFromLang, type ScriptId } from "./fonts.ts";
-import { textLooksVertical } from "./detectVertical.ts";
-import { t } from "./i18n.ts";
-import type { Book, BookSection } from "./types.ts";
+import { detectScript, scriptFromLang, type ScriptId } from "../fonts.ts";
+import { textLooksVertical } from "../detectVertical.ts";
+import { t } from "../i18n.ts";
+import type { Book, BookSection } from "../types.ts";
 
 const bookCache = new WeakMap<File, Promise<Book>>();
 

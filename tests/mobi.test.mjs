@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { isMobiMagic, mobiIsEncrypted } from "../src/lib/mobi.ts";
+import { isMobiMagic, mobiIsEncrypted } from "../src/lib/adapters/mobi.ts";
 
 function fakeMobi(opts = {}) {
   const magic = opts.magic ?? "BOOKMOBI";

@@ -7,7 +7,7 @@ import {
   resolveLocale,
   t,
 } from "../src/lib/i18n.ts";
-import { cssFontFamily, detectCjkFace, detectScript, extraScriptChoices, localFontNamesForLang, normalizeFontId, pickUsedFontFamily, preferredFontGroups, scriptFromLang, scriptsForEngine, usedFamilyFromLoaded } from "../src/lib/fonts.ts";
+import { cssFontFamily, detectCjkFace, detectScript, extraScriptChoices, localFontNamesForLang, normalizeFontId, pickUsedFontFamily, preferredFontGroups, scriptFromLang, scriptsForEngine } from "../src/lib/fonts.ts";
 
 assert.equal(detectLocale("en-US"), "en");
 assert.equal(detectLocale("ja"), "ja");
@@ -114,13 +114,6 @@ assert.equal(detectScript("ខ្មែរ"), "khmr");
 assert.equal(detectScript("<dc:language>el</dc:language>"), "grek");
 assert.equal(detectScript("汉字正文"), "sc");
 assert.equal(detectScript('xml:lang="en" 汉字正文'), "sc");
-assert.equal(
-  usedFamilyFromLoaded("auto", "latin", [
-    { family: "Georgia", file: "Georgia.ttf", bytes: new Uint8Array() },
-    { family: "Yu Mincho", file: "YuMincho.ttf", bytes: new Uint8Array() },
-  ]),
-  "Georgia",
-);
 assert.ok(localFontNamesForLang("km-KH").includes("Khmer UI"));
 {
   const scripts = scriptsForEngine("auto", "latin", ["km-KH", "en-US"]);

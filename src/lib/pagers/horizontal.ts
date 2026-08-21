@@ -5,10 +5,10 @@
  * Do not mount <foliate-view>. Do not teach this file 縦書き.
  */
 
-import { cssFontFamily, pickUsedFontFamily, systemFontFaceCss, type ScriptId } from "./fonts";
-import { t } from "./i18n";
+import { cssFontFamily, pickUsedFontFamily, systemFontFaceCss, type ScriptId } from "../fonts";
+import { t } from "../i18n";
 import { capPageCount, loadIframe, pagerHostCss, snapshotViewport, waitFrame } from "./snapshot";
-import type { Book, ConvertSettings, DocumentInfo, StatusFn, TocEntry, VerticalPager } from "./types";
+import type { Book, ConvertSettings, DocumentInfo, StatusFn, TocEntry, VerticalPager } from "../types";
 
 const systemCss = systemFontFaceCss();
 

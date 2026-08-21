@@ -2,8 +2,8 @@
  * TXT adapter. Bytes → one HTML section. Auto is always horizontal.
  */
 
-import { detectScript } from "./fonts.ts";
-import type { Book, BookSection } from "./types.ts";
+import { detectScript } from "../fonts.ts";
+import type { Book, BookSection } from "../types.ts";
 
 export type TxtEncodingId =
   | "utf-8"

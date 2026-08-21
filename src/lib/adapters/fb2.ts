@@ -4,8 +4,8 @@
  */
 
 import JSZip from "jszip";
-import { detectScript, scriptFromLang, type ScriptId } from "./fonts.ts";
-import type { Book } from "./types.ts";
+import { detectScript, scriptFromLang, type ScriptId } from "../fonts.ts";
+import type { Book } from "../types.ts";
 
 const bookCache = new WeakMap<File, Promise<Book>>();
 

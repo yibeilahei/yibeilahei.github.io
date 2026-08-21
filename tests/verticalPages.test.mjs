@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { clusterColumns, packColumnPages, fallbackPageWindows } from "../src/lib/verticalPages.ts";
+import { clusterColumns, packColumnPages, fallbackPageWindows } from "../src/lib/pagers/verticalPages.ts";
 
 function assertNoColumnCut(columns, pages, clipRight) {
   for (const page of pages) {

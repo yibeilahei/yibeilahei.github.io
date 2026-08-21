@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { isFb2File, isFb2Name, readFb2XmlSample, sniffFb2 } from "../src/lib/fb2.ts";
+import { isFb2File, isFb2Name, readFb2XmlSample, sniffFb2 } from "../src/lib/adapters/fb2.ts";
 
 assert.equal(isFb2Name("book.fb2"), true);
 assert.equal(isFb2Name("book.fbz"), true);

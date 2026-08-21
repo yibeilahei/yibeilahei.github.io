@@ -11,8 +11,8 @@ import {
   pickUsedFontFamily,
   systemFontFaceCss,
   type CjkFace,
-} from "./fonts";
-import { t } from "./i18n";
+} from "../fonts";
+import { t } from "../i18n";
 import {
   capPageCount,
   isWebKitEngine,
@@ -34,7 +34,7 @@ import type {
   StatusFn,
   TocEntry,
   VerticalPager,
-} from "./types";
+} from "../types";
 const systemCss = systemFontFaceCss();
 
 type PageWindow = { shift: number; axis: "x" | "y"; width?: number };

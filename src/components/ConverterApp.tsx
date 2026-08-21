@@ -6,9 +6,18 @@ import {
   comingSoonFor,
   listConverters,
   matchConverterAsync,
-} from "@/lib/converters";
-import { downloadBytes, downloadJobs } from "@/lib/download";
-import { runConvertQueue } from "@/lib/convertQueue";
+  readTxtFile,
+  type TxtEncodingId,
+} from "@/lib/adapters";
+import {
+  createJob,
+  downloadBytes,
+  downloadJobs,
+  initialJobState,
+  jobsReducer,
+  runConvertQueue,
+  type JobAction,
+} from "@/lib/jobs";
 import {
   DEFAULT_SETTINGS,
   DEVICE_PROFILES,
@@ -18,9 +27,7 @@ import {
   uid,
 } from "@/lib/settings";
 import { axisFromSample } from "@/lib/detectVertical";
-import { createJob, initialJobState, jobsReducer, type JobAction } from "@/lib/jobs";
 import { detectScript } from "@/lib/fonts";
-import { readTxtFile, type TxtEncodingId } from "@/lib/txt";
 import {
   applyDocumentLocale,
   resolveLocale,

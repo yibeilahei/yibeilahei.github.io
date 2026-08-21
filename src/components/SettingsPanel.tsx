@@ -18,7 +18,7 @@ import {
   type TxtEncodingId,
 } from "@/lib/txt";
 import { resolveLocale, t, type MessageKey } from "@/lib/i18n";
-import type { PersistSettings, WritingMode } from "@/lib/types";
+import type { PersistSettings, ResolvedWritingMode, WritingMode } from "@/lib/types";
 
 const FONT_GROUP_KEYS: Record<string, MessageKey> = {
   latin: "fontGroupLatin",
@@ -36,8 +36,9 @@ const FONT_GROUP_KEYS: Record<string, MessageKey> = {
 };
 
 type BookWriting = {
-  writingMode: WritingMode;
-  detectedVertical: boolean | null;
+  choice: WritingMode;
+  axis: ResolvedWritingMode | null;
+  sniffedAxis: ResolvedWritingMode | null;
 };
 
 type Props = {
@@ -62,7 +63,7 @@ function fontDesc(
   locale: ReturnType<typeof resolveLocale>,
 ): string {
   if (!book) return t("writingDetectOnDrop", undefined, locale);
-  if (book.writingMode === "auto" && book.detectedVertical == null && !family) {
+  if (book.choice === "auto" && book.axis == null && !family) {
     return t("writingDetecting", undefined, locale);
   }
   if (fontId === "auto") {
@@ -106,15 +107,15 @@ function writingDesc(
   locale: ReturnType<typeof resolveLocale>,
 ): string {
   if (!book) return t("writingDetectOnDrop", undefined, locale);
-  if (book.writingMode === "auto" && book.detectedVertical == null) {
+  if (book.choice === "auto" && book.axis == null) {
     return t("writingDetecting", undefined, locale);
   }
-  const mode = t(book.detectedVertical ? "vertical" : "horizontal", undefined, locale);
-  if (book.writingMode === "auto") {
-    return t("writingThisBook", { mode }, locale);
+  const live = t(book.axis || "horizontal", undefined, locale);
+  if (book.choice === "auto") {
+    return t("writingThisBook", { mode: live }, locale);
   }
-  if (book.detectedVertical == null) return t("writingOverride", undefined, locale);
-  return t("writingOverrideDetected", { mode }, locale);
+  if (book.sniffedAxis == null) return t("writingOverride", undefined, locale);
+  return t("writingOverrideDetected", { mode: t(book.sniffedAxis, undefined, locale) }, locale);
 }
 
 export function SettingsPanel({
@@ -133,9 +134,7 @@ export function SettingsPanel({
 }: Props) {
   const isClient = useSyncExternalStore(subscribeNoop, clientSnapshot, serverSnapshot);
   const locale = resolveLocale(settings.locale, isClient ? undefined : "en");
-  const vertical =
-    bookWriting?.writingMode === "vertical" ||
-    (bookWriting?.writingMode === "auto" && bookWriting.detectedVertical === true);
+  const vertical = bookWriting?.axis === "vertical";
   const writingLocked = !bookWriting || writingDisabled;
   const fontLocked = !bookWriting || writingDisabled;
   const installedIds = useMemo(
@@ -349,7 +348,7 @@ export function SettingsPanel({
           <button
             type="button"
             disabled={writingLocked}
-            className={bookWriting?.writingMode === "auto" || !bookWriting ? "active" : ""}
+            className={bookWriting?.choice === "auto" || !bookWriting ? "active" : ""}
             onClick={() => onBookWritingChange("auto")}
           >
             {t("auto", undefined, locale)}
@@ -357,7 +356,7 @@ export function SettingsPanel({
           <button
             type="button"
             disabled={writingLocked}
-            className={bookWriting?.writingMode === "horizontal" ? "active" : ""}
+            className={bookWriting?.choice === "horizontal" ? "active" : ""}
             onClick={() => onBookWritingChange("horizontal")}
           >
             {t("horizontal", undefined, locale)}
@@ -365,7 +364,7 @@ export function SettingsPanel({
           <button
             type="button"
             disabled={writingLocked}
-            className={bookWriting?.writingMode === "vertical" ? "active" : ""}
+            className={bookWriting?.choice === "vertical" ? "active" : ""}
             onClick={() => onBookWritingChange("vertical")}
           >
             {t("vertical", undefined, locale)}

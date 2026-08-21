@@ -18,7 +18,8 @@ import {
   toConvertSettings,
   uid,
 } from "@/lib/settings";
-import { convertWritingMode, detectedVerticalFromSample } from "@/lib/detectVertical";
+import { axisFromSample } from "@/lib/detectVertical";
+import { createJob, initialJobState, jobsReducer, type JobAction } from "@/lib/jobs";
 import { detectScript, pickUsedFontFamily } from "@/lib/fonts";
 import { readTxtFile, type TxtEncodingId } from "@/lib/txt";
 import {
@@ -56,8 +57,7 @@ function paintFrame(
 export function ConverterApp() {
   const [settings, setSettings] = useState<PersistSettings>(DEFAULT_SETTINGS);
   const [hydrated, setHydrated] = useState(false);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [jobState, setJobState] = useState(initialJobState);
   const [page, setPage] = useState(0);
   const [converting, setConverting] = useState(false);
   const [engineStatus, setEngineStatus] = useState({ text: t("loadingEngine"), kind: "" });
@@ -71,26 +71,29 @@ export function ConverterApp() {
   const xtchRef = useRef<XtchBook | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const jobsRef = useRef(jobs);
+  const jobStateRef = useRef(jobState);
   const settingsRef = useRef(settings);
   const pageRef = useRef(page);
   const toastTimer = useRef<number | null>(null);
   const convertingRef = useRef(false);
   const convertQueueRef = useRef<((opts?: { maxPages?: number; download?: boolean }) => Promise<void>) | null>(null);
-  const activeIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    jobsRef.current = jobs;
-  }, [jobs]);
+  jobStateRef.current = jobState;
+  const { jobs, activeId } = jobState;
+
+  const dispatchJob = useCallback((action: JobAction) => {
+    const next = jobsReducer(jobStateRef.current, action);
+    jobStateRef.current = next;
+    setJobState(next);
+    return next;
+  }, []);
+
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
   useEffect(() => {
     pageRef.current = page;
   }, [page]);
-  useEffect(() => {
-    activeIdRef.current = activeId;
-  }, [activeId]);
 
   const showToast = useCallback((message: string, type: ToastState["type"] = "info") => {
     setToast({ message, type });
@@ -100,12 +103,6 @@ export function ConverterApp() {
 
   const setStatus = useCallback((text: string, kind = "") => {
     setEngineStatus({ text, kind });
-  }, []);
-
-  const commitJobs = useCallback((update: (current: Job[]) => Job[]) => {
-    const next = update(jobsRef.current);
-    jobsRef.current = next;
-    setJobs(next);
   }, []);
 
   useEffect(() => {
@@ -130,8 +127,8 @@ export function ConverterApp() {
       if (!xtchRef.current) setStatus(t("engineReady", undefined, locale), "ready");
       return;
     }
-    const s = toConvertSettings(settingsRef.current);
-    ensureRenderer(s.device.w, s.device.h, setStatus)
+    const device = DEVICE_PROFILES[settingsRef.current.deviceId] || DEVICE_PROFILES.X4;
+    ensureRenderer(device.width, device.height, setStatus)
       .then(() => {
         if (!xtchRef.current) {
           setStatus(t("engineReady", undefined, locale), "ready");
@@ -157,7 +154,7 @@ export function ConverterApp() {
     paintFrame(canvas, decoded.rgba, decoded.width, decoded.height);
     setHasPreview(true);
     setPreviewTitle(book.title + (book.author ? " — " + book.author : ""));
-    const job = jobsRef.current.find((j) => j.id === activeIdRef.current);
+    const job = jobStateRef.current.jobs.find((j) => j.id === jobStateRef.current.activeId);
     const prefix = job?.result?.partial ? t("previewPrefix") : "";
     setPreviewPage(prefix + t("pageOf", { current: pageIndex + 1, total: book.pageCount }));
   }, []);
@@ -200,9 +197,9 @@ export function ConverterApp() {
 
   const selectJob = useCallback(
     (id: string) => {
-      const job = jobsRef.current.find((j) => j.id === id);
+      const job = jobStateRef.current.jobs.find((j) => j.id === id);
       if (!job) return;
-      setActiveId(id);
+      dispatchJob({ type: "select", id });
       if (job.result) {
         showXtch(job.result, true);
         return;
@@ -213,23 +210,15 @@ export function ConverterApp() {
       setPreviewTitle(job.file.name);
       setPreviewPage(job.status === "converting" ? t("convertingXtch") : t("waitingConvert"));
     },
-    [showXtch],
+    [dispatchJob, showXtch],
   );
 
   const refreshPreview = useCallback(() => {
-    setJobs((prev) => {
-      const next = prev.map((j) =>
-        j.status === "converting"
-          ? j
-          : { ...j, status: "queued" as const, message: t("waitingReconvert"), error: null },
-      );
-      jobsRef.current = next;
-      return next;
-    });
+    dispatchJob({ type: "requeueAll", message: t("waitingReconvert") });
     window.setTimeout(() => {
       void convertQueueRef.current?.({ maxPages: PREVIEW_PAGES });
     }, 0);
-  }, []);
+  }, [dispatchJob]);
 
   const updateSettings = useCallback(
     (patch: Partial<PersistSettings>, refresh = false) => {
@@ -249,29 +238,11 @@ export function ConverterApp() {
     [refreshPreview],
   );
 
-  const patchActiveBook = useCallback((patch: Partial<Job>) => {
-    const id = activeIdRef.current;
-    if (!id || convertingRef.current) return false;
-    const job = jobsRef.current.find((j) => j.id === id);
-    if (!job) return false;
-    setJobs((prev) => {
-      const next = prev.map((j) =>
-        j.id === id
-          ? {
-              ...j,
-              ...patch,
-              status: "queued" as const,
-              message: t("waitingReconvert"),
-              result: null,
-              error: null,
-              engine: null,
-              usedSettings: null,
-            }
-          : j,
-      );
-      jobsRef.current = next;
-      return next;
-    });
+  const requeueActive = useCallback((action: JobAction) => {
+    if (convertingRef.current) return false;
+    const id = jobStateRef.current.activeId;
+    if (!id) return false;
+    dispatchJob(action);
     xtchRef.current = null;
     setHasPreview(false);
     setPageCount(0);
@@ -279,23 +250,23 @@ export function ConverterApp() {
       void convertQueueRef.current?.({ maxPages: PREVIEW_PAGES });
     }, 0);
     return true;
-  }, []);
+  }, [dispatchJob]);
 
   const updateBookWriting = useCallback((mode: WritingMode) => {
-    const job = jobsRef.current.find((j) => j.id === activeIdRef.current);
-    if (!job || job.writingMode === mode) return;
-    patchActiveBook({ writingMode: mode });
-  }, [patchActiveBook]);
+    const job = jobStateRef.current.jobs.find((j) => j.id === jobStateRef.current.activeId);
+    if (!job || job.choice === mode) return;
+    requeueActive({ type: "choice", id: job.id, choice: mode, message: t("waitingReconvert") });
+  }, [requeueActive]);
 
   const updateBookFont = useCallback((fontId: string) => {
-    const job = jobsRef.current.find((j) => j.id === activeIdRef.current);
+    const job = jobStateRef.current.jobs.find((j) => j.id === jobStateRef.current.activeId);
     if (!job || job.fontId === fontId) return;
-    patchActiveBook({ fontId });
-  }, [patchActiveBook]);
+    requeueActive({ type: "patch", id: job.id, patch: { fontId }, message: t("waitingReconvert") });
+  }, [requeueActive]);
 
   const updateTxtEncoding = useCallback(
     (txtEncoding: string) => {
-      const job = jobsRef.current.find((j) => j.id === activeIdRef.current);
+      const job = jobStateRef.current.jobs.find((j) => j.id === jobStateRef.current.activeId);
       if (!job || job.txtEncoding === txtEncoding) return;
       void (async () => {
         let detectedScript = job.detectedScript;
@@ -305,10 +276,15 @@ export function ConverterApp() {
         } catch {
           /* keep previous script */
         }
-        patchActiveBook({ txtEncoding, detectedScript });
+        requeueActive({
+          type: "patch",
+          id: job.id,
+          patch: { txtEncoding, detectedScript },
+          message: t("waitingReconvert"),
+        });
       })();
     },
-    [patchActiveBook],
+    [requeueActive],
   );
 
   const addFiles = useCallback(
@@ -324,27 +300,11 @@ export function ConverterApp() {
       for (const file of files) {
         const converter = await matchConverterAsync(file);
         if (converter) {
-          const exists = jobsRef.current.some(
+          const exists = jobStateRef.current.jobs.some(
             (j) => j.file.name === file.name && j.file.size === file.size,
           ) || nextJobs.some((j) => j.file.name === file.name && j.file.size === file.size);
           if (exists) continue;
-          nextJobs.push({
-            id: uid(),
-            file,
-            converter,
-            status: "queued",
-            message: t("detectingWriting"),
-            result: null,
-            error: null,
-            writingMode: "auto",
-            fontId: "auto",
-            txtEncoding: "auto",
-            detectedEncoding: null,
-            detectedVertical: null,
-            detectedScript: null,
-            engine: null,
-            usedSettings: null,
-          });
+          nextJobs.push(createJob(file, converter, uid(), t("detectingWriting")));
           continue;
         }
         const soon = comingSoonFor(file.name);
@@ -353,70 +313,43 @@ export function ConverterApp() {
       }
 
       if (nextJobs.length) {
-        const shouldSelect = !activeId;
-        setJobs((prev) => {
-          const merged = [...prev, ...nextJobs];
-          jobsRef.current = merged;
-          return merged;
-        });
-        if (shouldSelect) {
-          activeIdRef.current = nextJobs[0].id;
-          setActiveId(nextJobs[0].id);
+        const selectFirst = !jobStateRef.current.activeId;
+        dispatchJob({ type: "add", jobs: nextJobs, selectFirst });
+        if (selectFirst) {
+          setPreviewTitle(nextJobs[0].file.name);
+          setPreviewPage(t("waitingConvert"));
         }
         void (async () => {
-          const detected = await Promise.all(
+          await Promise.all(
             nextJobs.map(async (job) => {
               try {
                 const sniff = await job.converter.sniff(job.file);
-                return {
+                const sniffedAxis = axisFromSample(sniff.markup);
+                dispatchJob({
+                  type: "sniffed",
                   id: job.id,
-                  vertical: detectedVerticalFromSample(sniff.markup),
+                  sniffedAxis,
                   script: sniff.script,
                   encoding: sniff.encoding ?? null,
-                };
+                  message: t("writingSize", {
+                    mode: t(sniffedAxis),
+                    size: formatSize(job.file.size),
+                  }),
+                });
               } catch (err) {
-                return {
+                const message = err instanceof Error ? err.message : t("convertFailed");
+                dispatchJob({
+                  type: "sniffed",
                   id: job.id,
-                  vertical: false,
+                  sniffedAxis: "horizontal",
                   script: null,
-                  encoding: null as string | null,
-                  error: err instanceof Error ? err.message : t("convertFailed"),
-                };
+                  encoding: null,
+                  message,
+                  error: message,
+                });
               }
             }),
           );
-          const byId = new Map(detected.map((d) => [d.id, d]));
-          setJobs((prev) => {
-            const next = prev.map((j) => {
-              if (!byId.has(j.id) || j.detectedVertical != null) return j;
-              const hit = byId.get(j.id);
-              if (hit && "error" in hit && hit.error) {
-                return {
-                  ...j,
-                  status: "error" as const,
-                  error: hit.error,
-                  message: hit.error,
-                  detectedVertical: false,
-                };
-              }
-              const vertical = hit?.vertical === true;
-              return {
-                ...j,
-                detectedVertical: vertical,
-                detectedScript: hit?.script ?? null,
-                detectedEncoding: hit?.encoding ?? j.detectedEncoding,
-                message:
-                  j.status === "queued" && !j.result
-                    ? t("writingSize", {
-                        mode: t(vertical ? "vertical" : "horizontal"),
-                        size: formatSize(j.file.size),
-                      })
-                    : j.message,
-              };
-            });
-            jobsRef.current = next;
-            return next;
-          });
           window.setTimeout(() => {
             void convertQueueRef.current?.({ maxPages: PREVIEW_PAGES });
           }, 0);
@@ -430,23 +363,22 @@ export function ConverterApp() {
       }
       })();
     },
-    [activeId, showToast],
+    [dispatchJob, showToast],
   );
 
   const removeJob = useCallback(
     (id: string) => {
-      const job = jobsRef.current.find((j) => j.id === id);
+      const job = jobStateRef.current.jobs.find((j) => j.id === id);
       if (!job) return;
       if (convertingRef.current && job.status === "converting") return;
-      const remaining = jobsRef.current.filter((j) => j.id !== id);
-      jobsRef.current = remaining;
-      setJobs(remaining);
-      if (activeId === id) {
+      const wasActive = jobStateRef.current.activeId === id;
+      const remaining = jobStateRef.current.jobs.filter((j) => j.id !== id);
+      dispatchJob({ type: "remove", id });
+      if (wasActive) {
         xtchRef.current = null;
         const next = remaining[0];
         if (next) selectJob(next.id);
         else {
-          setActiveId(null);
           setHasPreview(false);
           setPageCount(0);
           setPreviewTitle(t("noBook"));
@@ -454,19 +386,19 @@ export function ConverterApp() {
         }
       }
     },
-    [activeId, selectJob],
+    [dispatchJob, selectJob],
   );
 
   const convertQueue = useCallback(async (opts: { maxPages?: number; download?: boolean } = {}) => {
     if (convertingRef.current) return;
     const preview = opts.maxPages != null;
-    const pending = jobsRef.current.filter((j) => {
+    const pending = jobStateRef.current.jobs.filter((j) => {
       if (preview) return j.status === "queued" || j.status === "error";
       return !j.result || j.result.partial || j.status === "error" || j.status === "queued";
     });
     if (!pending.length) {
       if (opts.download) {
-        const ready = jobsRef.current.filter((j) => j.result && !j.result.partial);
+        const ready = jobStateRef.current.jobs.filter((j) => j.result && !j.result.partial);
         if (ready.length) void downloadJobs(ready);
       }
       return;
@@ -489,40 +421,48 @@ export function ConverterApp() {
 
     for (let i = 0; i < pending.length; i++) {
       const job = pending[i];
-      if (!activeIdRef.current) {
-        activeIdRef.current = job.id;
-        setActiveId(job.id);
+      if (!jobStateRef.current.activeId) {
+        dispatchJob({ type: "select", id: job.id });
       }
-      commitJobs((prev) =>
-        prev.map((j) =>
-          j.id === job.id
-            ? {
-                ...j,
-                status: "converting",
-                message: preview ? t("previewing") : t("converting"),
-                usedSettings: {
-                  deviceId: settingsRef.current.deviceId,
-                  fontId: job.fontId,
-                  fontFamily: pickUsedFontFamily(
-                    job.fontId,
-                    job.detectedScript || (job.detectedVertical ? "jp" : null),
-                  ),
-                  fontSize: settingsRef.current.fontSize,
-                  lineHeight: settingsRef.current.lineHeight,
-                },
-              }
-            : j,
+      let axis = job.axis;
+      if (!axis) {
+        try {
+          const sniff = await job.converter.sniff(job.file);
+          axis = axisFromSample(sniff.markup);
+        } catch {
+          axis = "horizontal";
+        }
+        dispatchJob({
+          type: "sniffed",
+          id: job.id,
+          sniffedAxis: axis,
+          script: job.detectedScript,
+          encoding: job.detectedEncoding,
+          message: t("writingSize", { mode: t(axis), size: formatSize(job.file.size) }),
+        });
+      }
+      if (!axis) axis = "horizontal";
+      const usedSettings = {
+        deviceId: settingsRef.current.deviceId,
+        fontId: job.fontId,
+        fontFamily: pickUsedFontFamily(
+          job.fontId,
+          job.detectedScript || (axis === "vertical" ? "jp" : null),
         ),
-      );
+        fontSize: settingsRef.current.fontSize,
+        lineHeight: settingsRef.current.lineHeight,
+      };
+      dispatchJob({
+        type: "converting",
+        id: job.id,
+        message: preview ? t("previewing") : t("converting"),
+        usedSettings,
+        axis,
+      });
       try {
         const result = await job.converter.convert(
           job.file,
-          toConvertSettings(
-            settingsRef.current,
-            convertWritingMode(job.writingMode, job.detectedVertical),
-            job.fontId,
-            job.txtEncoding,
-          ),
+          toConvertSettings(settingsRef.current, axis, job.fontId, job.txtEncoding),
           {
           signal: abort.signal,
           maxPages: opts.maxPages,
@@ -533,44 +473,32 @@ export function ConverterApp() {
               pct: ((i + p) / pending.length) * 100,
               text: t("pageProgress", { name: job.file.name, current: currentPage, total }),
             });
-            commitJobs((prev) =>
-              prev.map((j) =>
-                j.id === job.id ? { ...j, message: t("pageShort", { current: currentPage, total }) } : j,
-              ),
-            );
+            dispatchJob({
+              type: "progress",
+              id: job.id,
+              message: t("pageShort", { current: currentPage, total }),
+            });
           },
         });
         doneCountLocal += 1;
         lastFilename = result.filename;
-        commitJobs((prev) =>
-          prev.map((j) =>
-            j.id === job.id
-              ? {
-                  ...j,
-                  status: "done",
-                  engine: result.engine || j.engine,
-                  usedSettings: {
-                    deviceId: settingsRef.current.deviceId,
-                    fontId: job.fontId,
-                    fontFamily:
-                      result.usedFontFamily ||
-                      j.usedSettings?.fontFamily ||
-                      pickUsedFontFamily(
-                        job.fontId,
-                        job.detectedScript || (job.detectedVertical ? "jp" : null),
-                      ),
-                    fontSize: settingsRef.current.fontSize,
-                    lineHeight: settingsRef.current.lineHeight,
-                  },
-                  result,
-                  message: result.partial
-                    ? t("previewPages", { n: result.pageCount })
-                    : t("pagesSize", { n: result.pageCount, size: formatSize(result.bytes.byteLength) }),
-                }
-              : j,
-          ),
-        );
-        if (job.id === activeIdRef.current || !xtchRef.current) {
+        dispatchJob({
+          type: "done",
+          id: job.id,
+          result,
+          engine: result.engine || job.engine,
+          axis,
+          usedSettings: {
+            ...usedSettings,
+            fontFamily:
+              result.usedFontFamily ||
+              usedSettings.fontFamily,
+          },
+          message: result.partial
+            ? t("previewPages", { n: result.pageCount })
+            : t("pagesSize", { n: result.pageCount, size: formatSize(result.bytes.byteLength) }),
+        });
+        if (job.id === jobStateRef.current.activeId || !xtchRef.current) {
           showXtch(result, !xtchRef.current);
         }
         if (opts.download && !result.partial) {
@@ -580,22 +508,14 @@ export function ConverterApp() {
         const error = err as Error;
         if (error.name === "AbortError" || error.message === "Cancelled") {
           cancelled = true;
-          commitJobs((prev) =>
-            prev.map((j) =>
-              j.id === job.id ? { ...j, status: "queued", message: t("cancelled") } : j,
-            ),
-          );
+          dispatchJob({ type: "cancel", id: job.id, message: t("cancelled") });
           setProgress({ visible: true, pct: 0, text: t("cancelled") });
           break;
         }
         console.error(err);
         const message = error.message || t("convertFailed");
         if (!firstError) firstError = message;
-        commitJobs((prev) =>
-          prev.map((j) =>
-            j.id === job.id ? { ...j, status: "error", error: message, message } : j,
-          ),
-        );
+        dispatchJob({ type: "error", id: job.id, message });
       }
     }
 
@@ -604,7 +524,7 @@ export function ConverterApp() {
     setConverting(false);
 
     if (!cancelled) {
-      const leftover = jobsRef.current.filter((j) => {
+      const leftover = jobStateRef.current.jobs.filter((j) => {
         if (preview) return j.status === "queued" || j.status === "error";
         return !j.result || j.result.partial || j.status === "error" || j.status === "queued";
       });
@@ -640,7 +560,7 @@ export function ConverterApp() {
       setProgress({ visible: true, pct: 100, text: t("failedCount", { n: pending.length - doneCountLocal }) });
       showToast(firstError, "error");
     }
-  }, [commitJobs, setStatus, showToast, showXtch]);
+  }, [dispatchJob, setStatus, showToast, showXtch]);
 
   useEffect(() => {
     convertQueueRef.current = convertQueue;
@@ -788,8 +708,9 @@ export function ConverterApp() {
           bookWriting={
             activeJob
               ? {
-                  writingMode: activeJob.writingMode,
-                  detectedVertical: activeJob.detectedVertical,
+                  choice: activeJob.choice,
+                  axis: activeJob.axis,
+                  sniffedAxis: activeJob.sniffedAxis,
                 }
               : null
           }

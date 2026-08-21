@@ -5,7 +5,7 @@
 
 import { encodeXthPage, buildXtchContainer, outputNameFromSource } from "./xtch";
 import { ensureRenderer, applyRenderSettings } from "./engine";
-import { detectedVerticalFromSample, pagerKind, sampleEpubMarkup } from "./detectVertical";
+import { pagerKind, sampleEpubMarkup } from "./detectVertical";
 import { detectScriptFromEpub } from "./fonts";
 import { t } from "./i18n";
 import type {
@@ -90,12 +90,7 @@ const EpubConverter: Converter = {
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
     const { w, h } = settings.device;
     let sniff: AdapterSniff | null = null;
-    let mode = settings.writingMode;
-    if (mode === "auto") {
-      sniff = await this.sniff(file);
-      mode = detectedVerticalFromSample(sniff.markup) ? "vertical" : "horizontal";
-    }
-    const layout = pagerKind(mode, null, this.id, settings.epubCrengine !== false);
+    const layout = pagerKind(settings.writingMode, this.id, settings.epubCrengine !== false);
     if (layout === "vertical") {
       if (onStatus) onStatus(t("verticalFoliate"));
       const [{ createVerticalPager }, { makeBook }] = await Promise.all([
@@ -159,7 +154,7 @@ const EpubConverter: Converter = {
       };
     }
 
-    const detectedScript = sniff?.script ?? (await detectScriptFromEpub(file));
+    const detectedScript = (sniff ?? (await this.sniff(file))).script ?? (await detectScriptFromEpub(file));
     const { module, renderer, usedFontFamily, fallbackFamily } = await ensureRenderer(
       w,
       h,
@@ -277,7 +272,7 @@ const TxtConverter: Converter = {
     const { bookFromTxt } = await import("./txt");
     const book = await bookFromTxt(file, settings.txtEncoding || "auto");
     const titleFallback = file.name.replace(/\.txt$/i, "");
-    if (pagerKind(settings.writingMode, null, this.id) === "vertical") {
+    if (pagerKind(settings.writingMode, this.id) === "vertical") {
       const { createVerticalPager } = await import("./vertical");
       const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
         maxPages: opts?.maxPages,
@@ -382,12 +377,7 @@ const MobiConverter: Converter = {
     const { openMobiBook } = await import("./mobi");
     const book = await openMobiBook(file);
     const titleFallback = file.name.replace(/\.(mobi|azw|azw3)$/i, "");
-    let mode = settings.writingMode;
-    if (mode === "auto") {
-      const sniff = await this.sniff(file);
-      mode = detectedVerticalFromSample(sniff.markup) ? "vertical" : "horizontal";
-    }
-    if (pagerKind(mode, null, this.id) === "vertical") {
+    if (pagerKind(settings.writingMode, this.id) === "vertical") {
       const { createVerticalPager } = await import("./vertical");
       const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
         maxPages: opts?.maxPages,
@@ -499,12 +489,7 @@ const Fb2Converter: Converter = {
     const { openFb2Book } = await import("./fb2");
     const book = await openFb2Book(file);
     const titleFallback = file.name.replace(/\.(fb2\.zip|fb2|fbz)$/i, "");
-    let mode = settings.writingMode;
-    if (mode === "auto") {
-      const sniff = await this.sniff(file);
-      mode = detectedVerticalFromSample(sniff.markup) ? "vertical" : "horizontal";
-    }
-    if (pagerKind(mode, null, this.id) === "vertical") {
+    if (pagerKind(settings.writingMode, this.id) === "vertical") {
       const { createVerticalPager } = await import("./vertical");
       const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
         maxPages: opts?.maxPages,

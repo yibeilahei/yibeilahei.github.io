@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import {
-  convertWritingMode,
+  axisFromSample,
   detectedVerticalFromSample,
-  effectiveWritingMode,
   pagerKind,
   textLooksVertical,
 } from "../src/lib/detectVertical.ts";
@@ -20,31 +19,21 @@ assert.equal(detectedVerticalFromSample(""), false);
 assert.equal(detectedVerticalFromSample(null), false);
 assert.equal(detectedVerticalFromSample(undefined), false);
 
-assert.equal(effectiveWritingMode("auto", true), "vertical");
-assert.equal(effectiveWritingMode("auto", false), "horizontal");
-assert.equal(effectiveWritingMode("auto", null), "horizontal");
-assert.equal(effectiveWritingMode("vertical", false), "vertical");
-assert.equal(effectiveWritingMode("horizontal", true), "horizontal");
-assert.equal(convertWritingMode("auto", true), "vertical");
-assert.equal(convertWritingMode("auto", false), "horizontal");
-assert.equal(convertWritingMode("auto", null), "auto");
-assert.equal(convertWritingMode("vertical", false), "vertical");
+assert.equal(axisFromSample("body { writing-mode: vertical-rl; }"), "vertical");
+assert.equal(axisFromSample(""), "horizontal");
+assert.equal(axisFromSample(null), "horizontal");
 
-assert.equal(pagerKind("auto", true, "epub"), "vertical");
-assert.equal(pagerKind("auto", false, "epub"), "crengine");
-assert.equal(pagerKind("auto", false, "epub", true), "crengine");
-assert.equal(pagerKind("auto", false, "epub", false), "horizontal");
-assert.equal(pagerKind("auto", true, "epub", true), "vertical");
-assert.equal(pagerKind("horizontal", true, "epub", true), "crengine");
-assert.equal(pagerKind("horizontal", true, "epub", false), "horizontal");
-assert.equal(pagerKind("auto", false, "txt"), "horizontal");
-assert.equal(pagerKind("vertical", false, "txt"), "vertical");
-assert.equal(pagerKind("horizontal", true, "txt"), "horizontal");
-assert.equal(pagerKind("auto", null, "txt"), "horizontal");
-assert.equal(pagerKind("auto", false, "mobi"), "horizontal");
-assert.equal(pagerKind("vertical", false, "mobi"), "vertical");
-assert.equal(pagerKind("auto", false, "fb2"), "horizontal");
-assert.equal(pagerKind("vertical", false, "fb2"), "vertical");
-assert.equal(pagerKind("auto", false, "txt", true), "horizontal");
+assert.equal(pagerKind("vertical", "epub"), "vertical");
+assert.equal(pagerKind("horizontal", "epub"), "crengine");
+assert.equal(pagerKind("horizontal", "epub", true), "crengine");
+assert.equal(pagerKind("horizontal", "epub", false), "horizontal");
+assert.equal(pagerKind("vertical", "epub", true), "vertical");
+assert.equal(pagerKind("horizontal", "txt"), "horizontal");
+assert.equal(pagerKind("vertical", "txt"), "vertical");
+assert.equal(pagerKind("horizontal", "mobi"), "horizontal");
+assert.equal(pagerKind("vertical", "mobi"), "vertical");
+assert.equal(pagerKind("horizontal", "fb2"), "horizontal");
+assert.equal(pagerKind("vertical", "fb2"), "vertical");
+assert.equal(pagerKind("horizontal", "txt", true), "horizontal");
 
 console.log("detectVertical tests passed");

@@ -103,7 +103,8 @@ export type PersistSettings = {
 
 export type ConvertSettings = PersistSettings & {
   device: { w: number; h: number; id: string };
-  writingMode: WritingMode;
+  /** Resolved axis only. Auto is never passed into a pager. */
+  writingMode: ResolvedWritingMode;
   fontId: string;
   /** TXT only. `"auto"` uses `detectTxtEncoding`. */
   txtEncoding?: string;
@@ -199,13 +200,16 @@ export type Job = {
   message: string;
   result: ConvertResult | null;
   error: string | null;
-  writingMode: WritingMode;
+  /** User writing control. */
+  choice: WritingMode;
+  /** Layout axis. `null` until Auto sniff (or override) has an answer. */
+  axis: ResolvedWritingMode | null;
+  /** Auto sniff result. Settings “override · detected …” only — convert reads `axis`. */
+  sniffedAxis: ResolvedWritingMode | null;
   fontId: string;
   /** TXT only. `"auto"` or a `TxtEncodingId`. */
   txtEncoding: string;
   detectedEncoding: string | null;
-  /** Auto sniff (`textLooksVertical`). Override is `writingMode`. */
-  detectedVertical: boolean | null;
   /** Script/fonts only — not Auto. */
   detectedScript: ScriptId | null;
   engine: LayoutLib | null;

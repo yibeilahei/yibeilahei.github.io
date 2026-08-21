@@ -1,5 +1,5 @@
 import { normalizeLocalePref } from "./i18n";
-import type { DeviceProfile, PersistSettings, ConvertSettings, WritingMode } from "./types";
+import type { DeviceProfile, PersistSettings, ConvertSettings, ResolvedWritingMode } from "./types";
 
 export const SETTINGS_KEY = "lazahata.xtch.settings.v1";
 
@@ -47,7 +47,7 @@ export function saveSettings(settings: PersistSettings) {
 
 export function toConvertSettings(
   settings: PersistSettings,
-  writingMode: WritingMode = "auto",
+  writingMode: ResolvedWritingMode,
   fontId?: string,
   txtEncoding?: string,
 ): ConvertSettings {

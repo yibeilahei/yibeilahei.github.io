@@ -1,6 +1,6 @@
 "use client";
 
-import { effectiveWritingMode, pagerKind } from "@/lib/detectVertical";
+import { pagerKind } from "@/lib/detectVertical";
 import { pickUsedFontFamily } from "@/lib/fonts";
 import { t, type Locale } from "@/lib/i18n";
 import type { Job, LayoutLib, PersistSettings } from "@/lib/types";
@@ -18,8 +18,8 @@ type Props = {
 
 function predictedEngine(job: Job, epubCrengine: boolean): LayoutLib | null {
   if (job.engine) return job.engine;
-  if (job.writingMode === "auto" && job.detectedVertical == null) return null;
-  const kind = pagerKind(job.writingMode, job.detectedVertical, job.converter.id, epubCrengine);
+  if (!job.axis) return null;
+  const kind = pagerKind(job.axis, job.converter.id, epubCrengine);
   return kind === "crengine" ? "crengine" : "foliate";
 }
 
@@ -49,18 +49,13 @@ export function Queue({
           fontId: job.fontId,
           fontFamily: pickUsedFontFamily(
             job.fontId,
-            job.detectedScript || (job.detectedVertical ? "jp" : null),
+            job.detectedScript || (job.axis === "vertical" ? "jp" : null),
           ),
           fontSize: settings.fontSize,
           lineHeight: settings.lineHeight,
         };
         const engine = predictedEngine(job, settings.epubCrengine !== false);
-        const writing =
-          job.writingMode === "auto" && job.detectedVertical == null
-            ? "…"
-            : effectiveWritingMode(job.writingMode, job.detectedVertical) === "vertical"
-              ? t("vertical", undefined, locale)
-              : t("horizontal", undefined, locale);
+        const writing = job.axis ? t(job.axis, undefined, locale) : "…";
         const fontLabel = used.fontFamily;
 
         return (

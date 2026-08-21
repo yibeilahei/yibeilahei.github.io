@@ -4,10 +4,9 @@
  * Adapters turn bytes into a Book. Auto (or the user override) picks a
  * pager by writing mode, not file type. XTCH encoding does not change.
  *
- * EPUB / TXT / MOBI / FB2 are wired. Horizontal EPUB defaults to CREngine.
+ * EPUB / TXT / MOBI / FB2 are wired. Horizontal uses the 横書き pager.
  */
 
-import type { CREngineModule, EpubRenderer } from "./engine";
 import type { ScriptId } from "./fonts";
 
 export type StatusFn = (text: string, kind?: string) => void;
@@ -84,7 +83,7 @@ export type WritingMode = "auto" | "horizontal" | "vertical";
 export type ResolvedWritingMode = "horizontal" | "vertical";
 
 /**
- * Planned adapters. EPUB, TXT, MOBI, and FB2 are registered. Do not feed TXT / MOBI / AZW / FB2 to CREngine.
+ * Planned adapters. EPUB, TXT, MOBI, and FB2 are registered.
  */
 export type AdapterId = "epub" | "txt" | "mobi" | "fb2";
 
@@ -97,8 +96,6 @@ export type PersistSettings = {
   readDirection: number;
   renameFromTitle: boolean;
   locale: import("./i18n").LocalePref;
-  /** Horizontal EPUB uses CREngine (default). Off uses the 横書き pager. */
-  epubCrengine: boolean;
 };
 
 export type ConvertSettings = PersistSettings & {
@@ -109,9 +106,6 @@ export type ConvertSettings = PersistSettings & {
   /** TXT only. `"auto"` uses `detectTxtEncoding`. */
   txtEncoding?: string;
 };
-
-/** Layout library actually used. Queue still shows this (not V/H yet). */
-export type LayoutLib = "crengine" | "foliate";
 
 export type JobUsedSettings = {
   deviceId: string;
@@ -127,7 +121,6 @@ export type ConvertResult = {
   info: DocumentInfo;
   pageCount: number;
   partial?: boolean;
-  engine?: LayoutLib;
   usedFontFamily?: string;
 };
 
@@ -149,9 +142,7 @@ export type VerticalPager = {
 };
 
 export type BookSession = {
-  kind: "crengine" | "vertical" | "horizontal";
-  module?: CREngineModule;
-  renderer?: EpubRenderer;
+  kind: "vertical" | "horizontal";
   pager?: VerticalPager;
   pageCount: number;
   info: DocumentInfo;
@@ -212,7 +203,6 @@ export type Job = {
   detectedEncoding: string | null;
   /** Script/fonts only — not Auto. */
   detectedScript: ScriptId | null;
-  engine: LayoutLib | null;
   usedSettings: JobUsedSettings | null;
 };
 

@@ -116,7 +116,6 @@ export async function runConvertQueue(
         type: "done",
         id: job.id,
         result,
-        engine: result.engine || job.engine,
         axis,
         usedSettings: {
           ...usedSettings,

@@ -1,4 +1,4 @@
-/** CREngine needs font file bytes (Local Font Access, else CDN). */
+/** Font stacks and optional CDN/local bytes for CSS pagers. */
 
 import JSZip from "jszip";
 

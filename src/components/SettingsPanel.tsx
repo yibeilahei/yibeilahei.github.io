@@ -412,21 +412,6 @@ export function SettingsPanel({
         </label>
       </div>
 
-      <div className="setting-row">
-        <div>
-          <div className="setting-title">{t("epubCrengine", undefined, locale)}</div>
-          <div className="setting-desc">{t("epubCrengineDesc", undefined, locale)}</div>
-        </div>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={settings.epubCrengine}
-            onChange={(e) => onChange({ epubCrengine: e.target.checked }, true)}
-          />
-          <span className="toggle-slider" />
-        </label>
-      </div>
-
       <p className="note">{t("note", undefined, locale)}</p>
     </aside>
   );

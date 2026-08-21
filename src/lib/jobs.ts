@@ -12,7 +12,6 @@ import type {
   Converter,
   Job,
   JobUsedSettings,
-  LayoutLib,
   ResolvedWritingMode,
   WritingMode,
 } from "./types";
@@ -55,7 +54,6 @@ export function createJob(file: File, converter: Converter, id: string, message:
     txtEncoding: "auto",
     detectedEncoding: null,
     detectedScript: null,
-    engine: null,
     usedSettings: null,
   };
 }
@@ -94,7 +92,6 @@ export type JobAction =
       result: ConvertResult;
       message: string;
       usedSettings: JobUsedSettings;
-      engine: LayoutLib | null;
       axis?: ResolvedWritingMode;
     }
   | { type: "error"; id: string; message: string }
@@ -113,7 +110,6 @@ function requeue(job: Job, message: string, extra: Partial<Job> = {}): Job {
     message,
     result: null,
     error: null,
-    engine: null,
     usedSettings: null,
   };
 }
@@ -205,7 +201,6 @@ export function jobsReducer(state: JobState, action: JobAction): JobState {
         jobs: mapJob(state.jobs, action.id, (job) => ({
           ...job,
           status: "done",
-          engine: action.engine || job.engine,
           usedSettings: action.usedSettings,
           result: action.result,
           message: action.message,

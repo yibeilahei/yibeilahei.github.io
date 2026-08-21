@@ -7,7 +7,7 @@
  * - `page-progression-direction=rtl` alone is not enough (manga is often 横書き)
  *
  * Adapters supply a markup/CSS sample. Empty sample (TXT) → horizontal.
- * Horizontal EPUB uses CREngine unless `epubCrengine` is off.
+ * Horizontal EPUB uses the 横書き pager.
  */
 
 import JSZip from "jszip";
@@ -53,29 +53,10 @@ export async function isVerticalEpub(file: File): Promise<boolean> {
   return detectedVerticalFromSample(await sampleEpubMarkup(file));
 }
 
-export type LayoutEngine = "foliate" | "crengine";
-
 /**
  * Resolved axis → which pager.
- * Vertical is always the 縦書き pager. Horizontal EPUB uses CREngine
- * unless `epubCrengine` is false (横書き pager). Do not send TXT / MOBI /
- * FB2 to CREngine.
+ * Vertical is always the 縦書き pager. Horizontal is always the 横書き pager.
  */
-export function pagerKind(
-  axis: ResolvedWritingMode,
-  format: string,
-  epubCrengine = true,
-): "vertical" | "horizontal" | "crengine" {
-  if (axis === "vertical") return "vertical";
-  if (format === "epub" && epubCrengine) return "crengine";
-  return "horizontal";
-}
-
-/** EPUB only: vertical → Foliate pager, horizontal → CREngine by default. */
-export async function resolveLayoutEngine(
-  _file: File,
-  axis: ResolvedWritingMode,
-): Promise<{ engine: LayoutEngine; vertical: boolean }> {
-  if (axis === "vertical") return { engine: "foliate", vertical: true };
-  return { engine: "crengine", vertical: false };
+export function pagerKind(axis: ResolvedWritingMode): "vertical" | "horizontal" {
+  return axis === "vertical" ? "vertical" : "horizontal";
 }

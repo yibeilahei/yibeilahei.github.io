@@ -49,7 +49,6 @@ state = jobsReducer(state, {
   result: { bytes: new Uint8Array(), filename: "a.xtch", info: {}, pageCount: 1 },
   message: "1 page",
   usedSettings: { deviceId: "X4", fontId: "auto", fontFamily: "Georgia", fontSize: 34, lineHeight: 120 },
-  engine: "foliate",
 });
 assert.equal(state.jobs[0].status, "done");
 assert.equal(state.jobs[0].axis, "horizontal");

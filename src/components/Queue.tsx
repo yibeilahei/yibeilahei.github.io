@@ -1,9 +1,8 @@
 "use client";
 
-import { pagerKind } from "@/lib/detectVertical";
 import { pickUsedFontFamily } from "@/lib/fonts";
 import { t, type Locale } from "@/lib/i18n";
-import type { Job, LayoutLib, PersistSettings } from "@/lib/types";
+import type { Job, PersistSettings } from "@/lib/types";
 
 type Props = {
   jobs: Job[];
@@ -15,13 +14,6 @@ type Props = {
   locale: Locale;
   settings: PersistSettings;
 };
-
-function predictedEngine(job: Job, epubCrengine: boolean): LayoutLib | null {
-  if (job.engine) return job.engine;
-  if (!job.axis) return null;
-  const kind = pagerKind(job.axis, job.converter.id, epubCrengine);
-  return kind === "crengine" ? "crengine" : "foliate";
-}
 
 export function Queue({
   jobs,
@@ -54,7 +46,6 @@ export function Queue({
           fontSize: settings.fontSize,
           lineHeight: settings.lineHeight,
         };
-        const engine = predictedEngine(job, settings.epubCrengine !== false);
         const writing = job.axis ? t(job.axis, undefined, locale) : "…";
         const fontLabel = used.fontFamily;
 
@@ -68,13 +59,6 @@ export function Queue({
                 <span className="job-title">{job.file.name}</span>
               </div>
               <div className="job-facts">
-                <span className="job-tag lib">
-                  {engine === "foliate"
-                    ? t("libFoliate", undefined, locale)
-                    : engine === "crengine"
-                      ? t("libCrengine", undefined, locale)
-                      : "…"}
-                </span>
                 <span className="job-tag">{writing}</span>
                 <span className="job-tag">{used.deviceId}</span>
                 <span className="job-tag">{fontLabel}</span>

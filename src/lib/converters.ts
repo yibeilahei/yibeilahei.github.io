@@ -1,10 +1,9 @@
 /**
  * Format registry. EPUB, TXT, MOBI/AZW, and FB2 are wired.
- * Auto is markup sample → textLooksVertical. Do not feed TXT/MOBI/FB2 to CREngine.
+ * Auto is markup sample → textLooksVertical.
  */
 
 import { encodeXthPage, buildXtchContainer, outputNameFromSource } from "./xtch";
-import { ensureRenderer, applyRenderSettings } from "./engine";
 import { pagerKind, sampleEpubMarkup } from "./detectVertical";
 import { detectScriptFromEpub } from "./fonts";
 import { t } from "./i18n";
@@ -73,15 +72,6 @@ function assertNotCancelled(signal?: AbortSignal) {
 
 async function renderSessionPage(session: BookSession, pageIndex: number) {
   if (session.pager) return session.pager.renderPage(pageIndex);
-  if (session.renderer) {
-    session.renderer.goToPage(pageIndex);
-    session.renderer.renderCurrentPage();
-    const frame = session.renderer.getFrameBuffer();
-    if (!frame || frame.length === 0) {
-      throw new Error(t("emptyFrame", { n: pageIndex + 1 }));
-    }
-    return frame;
-  }
   throw new Error(t("rendererNotReady"));
 }
 
@@ -123,7 +113,6 @@ async function convertSession(
     info: session.info,
     pageCount: limit,
     partial,
-    engine: session.kind === "crengine" ? "crengine" : "foliate",
     usedFontFamily: session.usedFontFamily,
   };
 }
@@ -147,8 +136,7 @@ const EpubConverter: Converter = {
 
   async load(file, settings, onStatus?: StatusFn, opts?: { maxPages?: number }) {
     const { w, h } = settings.device;
-    let sniff: AdapterSniff | null = null;
-    const layout = pagerKind(settings.writingMode, this.id, settings.epubCrengine !== false);
+    const layout = pagerKind(settings.writingMode);
     if (layout === "vertical") {
       if (onStatus) onStatus(t("verticalFoliate"));
       const [{ createVerticalPager }, { makeBook }] = await Promise.all([
@@ -180,79 +168,34 @@ const EpubConverter: Converter = {
       };
     }
 
-    if (layout === "horizontal") {
-      if (onStatus) onStatus(t("horizontalFoliate"));
-      const [{ createHorizontalPager }, { makeBook }] = await Promise.all([
-        import("./horizontal"),
-        import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<Book> }>,
-      ]);
-      const book = await makeBook(file);
-      if (!sniff) sniff = await this.sniff(file);
-      if (sniff.script) book.script = sniff.script;
-      const horizontal = await createHorizontalPager(
-        book,
-        { ...settings, writingMode: "horizontal" },
-        onStatus,
-        {
-          maxPages: opts?.maxPages,
-          titleFallback: file.name.replace(/\.epub$/i, ""),
-        },
-      );
-      return {
-        kind: "horizontal" as const,
-        pager: horizontal.pager,
-        pageCount: horizontal.pageCount,
-        info: horizontal.info,
-        toc: horizontal.toc,
-        width: w,
-        height: h,
-        converter: this,
-        truncated: horizontal.truncated,
-        usedFontFamily: horizontal.usedFontFamily,
-      };
-    }
-
-    const detectedScript = (sniff ?? (await this.sniff(file))).script ?? (await detectScriptFromEpub(file));
-    const { module, renderer, usedFontFamily, fallbackFamily } = await ensureRenderer(
-      w,
-      h,
+    if (onStatus) onStatus(t("horizontalFoliate"));
+    const [{ createHorizontalPager }, { makeBook }] = await Promise.all([
+      import("./horizontal"),
+      import("foliate-js/view.js") as Promise<{ makeBook: (f: File) => Promise<Book> }>,
+    ]);
+    const book = await makeBook(file);
+    const sniff = await this.sniff(file);
+    if (sniff.script) book.script = sniff.script;
+    const horizontal = await createHorizontalPager(
+      book,
+      { ...settings, writingMode: "horizontal" },
       onStatus,
       {
-        fontId: settings.fontId,
-        detected: detectedScript,
+        maxPages: opts?.maxPages,
+        titleFallback: file.name.replace(/\.epub$/i, ""),
       },
     );
-    if (onStatus) onStatus(t("openingFile", { name: file.name }));
-    const data = new Uint8Array(await file.arrayBuffer());
-    const ptr = module.allocateMemory(data.length);
-    module.HEAPU8.set(data, ptr);
-    try {
-      renderer.loadEpubFromMemory(ptr, data.length);
-    } finally {
-      module.freeMemory(ptr);
-    }
-    applyRenderSettings(renderer, {
-      ...settings,
-      fontFace: usedFontFamily,
-      fallbackFace: fallbackFamily,
-      detectedCjk: detectedScript,
-    });
-    const pageCount = renderer.getPageCount();
-    if (!pageCount || pageCount <= 0) throw new Error(t("noPages"));
-    const info = (renderer.getDocumentInfo && renderer.getDocumentInfo()) || {};
-    if (!info.title) info.title = file.name.replace(/\.epub$/i, "");
-    const toc = (renderer.getToc && renderer.getToc()) || [];
     return {
-      kind: "crengine" as const,
-      module,
-      renderer,
-      pageCount,
-      info,
-      toc,
+      kind: "horizontal" as const,
+      pager: horizontal.pager,
+      pageCount: horizontal.pageCount,
+      info: horizontal.info,
+      toc: horizontal.toc,
       width: w,
       height: h,
       converter: this,
-      usedFontFamily,
+      truncated: horizontal.truncated,
+      usedFontFamily: horizontal.usedFontFamily,
     };
   },
 
@@ -283,7 +226,7 @@ const TxtConverter: Converter = {
     const { bookFromTxt } = await import("./txt");
     const book = await bookFromTxt(file, settings.txtEncoding || "auto");
     const titleFallback = file.name.replace(/\.txt$/i, "");
-    if (pagerKind(settings.writingMode, this.id) === "vertical") {
+    if (pagerKind(settings.writingMode) === "vertical") {
       const { createVerticalPager } = await import("./vertical");
       const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
         maxPages: opts?.maxPages,
@@ -348,7 +291,7 @@ const MobiConverter: Converter = {
     const { openMobiBook } = await import("./mobi");
     const book = await openMobiBook(file);
     const titleFallback = file.name.replace(/\.(mobi|azw|azw3)$/i, "");
-    if (pagerKind(settings.writingMode, this.id) === "vertical") {
+    if (pagerKind(settings.writingMode) === "vertical") {
       const { createVerticalPager } = await import("./vertical");
       const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
         maxPages: opts?.maxPages,
@@ -420,7 +363,7 @@ const Fb2Converter: Converter = {
     const { openFb2Book } = await import("./fb2");
     const book = await openFb2Book(file);
     const titleFallback = file.name.replace(/\.(fb2\.zip|fb2|fbz)$/i, "");
-    if (pagerKind(settings.writingMode, this.id) === "vertical") {
+    if (pagerKind(settings.writingMode) === "vertical") {
       const { createVerticalPager } = await import("./vertical");
       const vertical = await createVerticalPager(book, { ...settings, writingMode: "vertical" }, onStatus, {
         maxPages: opts?.maxPages,

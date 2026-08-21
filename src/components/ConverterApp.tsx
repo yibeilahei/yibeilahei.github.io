@@ -9,7 +9,6 @@ import {
 } from "@/lib/converters";
 import { downloadBytes, downloadJobs } from "@/lib/download";
 import { runConvertQueue } from "@/lib/convertQueue";
-import { ensureRenderer } from "@/lib/engine";
 import {
   DEFAULT_SETTINGS,
   DEVICE_PROFILES,
@@ -60,7 +59,7 @@ export function ConverterApp() {
   const [jobState, setJobState] = useState(initialJobState);
   const [page, setPage] = useState(0);
   const [converting, setConverting] = useState(false);
-  const [engineStatus, setEngineStatus] = useState({ text: t("loadingEngine"), kind: "" });
+  const [engineStatus, setEngineStatus] = useState({ text: t("engineReady"), kind: "ready" });
   const [progress, setProgress] = useState({ visible: false, pct: 0, text: "" });
   const [toast, setToast] = useState<ToastState | null>(null);
   const [hasPreview, setHasPreview] = useState(false);
@@ -123,22 +122,8 @@ export function ConverterApp() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!settings.epubCrengine) {
-      if (!xtchRef.current) setStatus(t("engineReady", undefined, locale), "ready");
-      return;
-    }
-    const device = DEVICE_PROFILES[settingsRef.current.deviceId] || DEVICE_PROFILES.X4;
-    ensureRenderer(device.width, device.height, setStatus)
-      .then(() => {
-        if (!xtchRef.current) {
-          setStatus(t("engineReady", undefined, locale), "ready");
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        setStatus(t("engineLoadFailed", undefined, locale), "error");
-      });
-  }, [hydrated, settings.epubCrengine, locale, setStatus]);
+    if (!xtchRef.current) setStatus(t("engineReady", undefined, locale), "ready");
+  }, [hydrated, locale, setStatus]);
 
   const renderPreviewPage = useCallback(() => {
     const book = xtchRef.current;

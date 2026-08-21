@@ -23,17 +23,7 @@ assert.equal(axisFromSample("body { writing-mode: vertical-rl; }"), "vertical");
 assert.equal(axisFromSample(""), "horizontal");
 assert.equal(axisFromSample(null), "horizontal");
 
-assert.equal(pagerKind("vertical", "epub"), "vertical");
-assert.equal(pagerKind("horizontal", "epub"), "crengine");
-assert.equal(pagerKind("horizontal", "epub", true), "crengine");
-assert.equal(pagerKind("horizontal", "epub", false), "horizontal");
-assert.equal(pagerKind("vertical", "epub", true), "vertical");
-assert.equal(pagerKind("horizontal", "txt"), "horizontal");
-assert.equal(pagerKind("vertical", "txt"), "vertical");
-assert.equal(pagerKind("horizontal", "mobi"), "horizontal");
-assert.equal(pagerKind("vertical", "mobi"), "vertical");
-assert.equal(pagerKind("horizontal", "fb2"), "horizontal");
-assert.equal(pagerKind("vertical", "fb2"), "vertical");
-assert.equal(pagerKind("horizontal", "txt", true), "horizontal");
+assert.equal(pagerKind("vertical"), "vertical");
+assert.equal(pagerKind("horizontal"), "horizontal");
 
 console.log("detectVertical tests passed");

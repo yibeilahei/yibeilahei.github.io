@@ -685,6 +685,7 @@ export function ConverterApp() {
           {t("ledePrefix", undefined, locale)}
           <strong>XTCH</strong>
           {t("ledeSuffix", undefined, locale)}
+          {t("ledeChrome", undefined, locale)}
         </p>
         <div className="chips">
           {chips.map((c) => (

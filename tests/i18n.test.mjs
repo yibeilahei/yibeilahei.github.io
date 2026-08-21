@@ -48,6 +48,7 @@ assert.equal(t("books", undefined, "ar"), "الكتب");
 assert.equal(t("ledeSuffix", undefined, "en"), "");
 assert.equal(t("ledeSuffix", undefined, "zh"), "");
 assert.equal(t("ledeSuffix", undefined, "zh-Hant"), "");
+assert.equal(t("ledeChrome", undefined, "en"), ". Works best on Chrome");
 assert.equal(t("books", undefined, "zh"), "图书");
 assert.equal(t("books", undefined, "zh-Hant"), "圖書");
 

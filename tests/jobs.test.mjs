@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { axisFromChoice, createJob, initialJobState, jobsReducer } from "../src/lib/jobs.ts";
+import { axisFromChoice, createJob, initialJobState, jobsReducer, pendingJobs } from "../src/lib/jobs.ts";
 
 assert.equal(axisFromChoice("vertical", "horizontal"), "vertical");
 assert.equal(axisFromChoice("horizontal", "vertical"), "horizontal");
@@ -57,5 +57,16 @@ assert.equal(state.jobs[0].axis, "horizontal");
 state = jobsReducer(state, { type: "remove", id: "job-1" });
 assert.equal(state.jobs.length, 0);
 assert.equal(state.activeId, null);
+
+{
+  const queued = { id: "a", status: "queued", result: null };
+  const error = { id: "b", status: "error", result: null };
+  const donePartial = { id: "c", status: "done", result: { partial: true } };
+  const doneFull = { id: "d", status: "done", result: { partial: false } };
+  const converting = { id: "e", status: "converting", result: null };
+  const jobs = [queued, error, donePartial, doneFull, converting];
+  assert.deepEqual(pendingJobs(jobs, true).map((j) => j.id), ["a", "b"]);
+  assert.deepEqual(pendingJobs(jobs, false).map((j) => j.id), ["a", "b", "c", "e"]);
+}
 
 console.log("jobs tests passed");

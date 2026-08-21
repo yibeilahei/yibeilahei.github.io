@@ -8,6 +8,7 @@ import {
   matchConverterAsync,
 } from "@/lib/converters";
 import { downloadBytes, downloadJobs } from "@/lib/download";
+import { runConvertQueue } from "@/lib/convertQueue";
 import { ensureRenderer } from "@/lib/engine";
 import {
   DEFAULT_SETTINGS,
@@ -15,12 +16,11 @@ import {
   formatSize,
   loadSettings,
   saveSettings,
-  toConvertSettings,
   uid,
 } from "@/lib/settings";
 import { axisFromSample } from "@/lib/detectVertical";
 import { createJob, initialJobState, jobsReducer, type JobAction } from "@/lib/jobs";
-import { detectScript, pickUsedFontFamily } from "@/lib/fonts";
+import { detectScript } from "@/lib/fonts";
 import { readTxtFile, type TxtEncodingId } from "@/lib/txt";
 import {
   applyDocumentLocale,
@@ -391,174 +391,32 @@ export function ConverterApp() {
 
   const convertQueue = useCallback(async (opts: { maxPages?: number; download?: boolean } = {}) => {
     if (convertingRef.current) return;
-    const preview = opts.maxPages != null;
-    const pending = jobStateRef.current.jobs.filter((j) => {
-      if (preview) return j.status === "queued" || j.status === "error";
-      return !j.result || j.result.partial || j.status === "error" || j.status === "queued";
-    });
-    if (!pending.length) {
-      if (opts.download) {
-        const ready = jobStateRef.current.jobs.filter((j) => j.result && !j.result.partial);
-        if (ready.length) void downloadJobs(ready);
-      }
-      return;
-    }
-
     convertingRef.current = true;
     setConverting(true);
     const abort = new AbortController();
     abortRef.current = abort;
-    setProgress({
-      visible: true,
-      pct: 0,
-      text: preview ? t("buildingPreview") : t("convertingFull"),
-    });
-
-    let doneCountLocal = 0;
-    let lastFilename = "";
-    let firstError: string | null = null;
-    let cancelled = false;
-
-    for (let i = 0; i < pending.length; i++) {
-      const job = pending[i];
-      if (!jobStateRef.current.activeId) {
-        dispatchJob({ type: "select", id: job.id });
-      }
-      let axis = job.axis;
-      if (!axis) {
-        try {
-          const sniff = await job.converter.sniff(job.file);
-          axis = axisFromSample(sniff.markup);
-        } catch {
-          axis = "horizontal";
-        }
-        dispatchJob({
-          type: "sniffed",
-          id: job.id,
-          sniffedAxis: axis,
-          script: job.detectedScript,
-          encoding: job.detectedEncoding,
-          message: t("writingSize", { mode: t(axis), size: formatSize(job.file.size) }),
-        });
-      }
-      if (!axis) axis = "horizontal";
-      const usedSettings = {
-        deviceId: settingsRef.current.deviceId,
-        fontId: job.fontId,
-        fontFamily: pickUsedFontFamily(
-          job.fontId,
-          job.detectedScript || (axis === "vertical" ? "jp" : null),
-        ),
-        fontSize: settingsRef.current.fontSize,
-        lineHeight: settingsRef.current.lineHeight,
-      };
-      dispatchJob({
-        type: "converting",
-        id: job.id,
-        message: preview ? t("previewing") : t("converting"),
-        usedSettings,
-        axis,
-      });
-      try {
-        const result = await job.converter.convert(
-          job.file,
-          toConvertSettings(settingsRef.current, axis, job.fontId, job.txtEncoding),
-          {
-          signal: abort.signal,
-          maxPages: opts.maxPages,
+    try {
+      await runConvertQueue(
+        {
+          getState: () => jobStateRef.current,
+          getSettings: () => settingsRef.current,
+          dispatch: dispatchJob,
           onStatus: setStatus,
-          onProgress: (p, currentPage, total) => {
-            setProgress({
-              visible: true,
-              pct: ((i + p) / pending.length) * 100,
-              text: t("pageProgress", { name: job.file.name, current: currentPage, total }),
-            });
-            dispatchJob({
-              type: "progress",
-              id: job.id,
-              message: t("pageShort", { current: currentPage, total }),
-            });
+          onProgress: (pct, text) => setProgress({ visible: true, pct, text }),
+          onJobDone: (jobId, result) => {
+            if (jobId === jobStateRef.current.activeId || !xtchRef.current) {
+              showXtch(result, !xtchRef.current);
+            }
           },
-        });
-        doneCountLocal += 1;
-        lastFilename = result.filename;
-        dispatchJob({
-          type: "done",
-          id: job.id,
-          result,
-          engine: result.engine || job.engine,
-          axis,
-          usedSettings: {
-            ...usedSettings,
-            fontFamily:
-              result.usedFontFamily ||
-              usedSettings.fontFamily,
-          },
-          message: result.partial
-            ? t("previewPages", { n: result.pageCount })
-            : t("pagesSize", { n: result.pageCount, size: formatSize(result.bytes.byteLength) }),
-        });
-        if (job.id === jobStateRef.current.activeId || !xtchRef.current) {
-          showXtch(result, !xtchRef.current);
-        }
-        if (opts.download && !result.partial) {
-          downloadBytes(result.bytes, result.filename);
-        }
-      } catch (err) {
-        const error = err as Error;
-        if (error.name === "AbortError" || error.message === "Cancelled") {
-          cancelled = true;
-          dispatchJob({ type: "cancel", id: job.id, message: t("cancelled") });
-          setProgress({ visible: true, pct: 0, text: t("cancelled") });
-          break;
-        }
-        console.error(err);
-        const message = error.message || t("convertFailed");
-        if (!firstError) firstError = message;
-        dispatchJob({ type: "error", id: job.id, message });
-      }
-    }
-
-    convertingRef.current = false;
-    abortRef.current = null;
-    setConverting(false);
-
-    if (!cancelled) {
-      const leftover = jobStateRef.current.jobs.filter((j) => {
-        if (preview) return j.status === "queued" || j.status === "error";
-        return !j.result || j.result.partial || j.status === "error" || j.status === "queued";
-      });
-      if (leftover.length) {
-        window.setTimeout(() => {
-          void convertQueueRef.current?.(opts);
-        }, 0);
-      }
-    }
-
-    if (cancelled) {
-      /* progress already set */
-    } else if (doneCountLocal && !firstError) {
-      if (opts.download) {
-        setProgress({ visible: true, pct: 100, text: t("downloadDone") });
-        showToast(
-          doneCountLocal === 1
-            ? t("downloadedOne", { name: lastFilename })
-            : t("downloadedMany", { n: doneCountLocal }),
-          "success",
-        );
-        setStatus(t("convertComplete"), "ready");
-      } else {
-        setProgress({ visible: true, pct: 100, text: t("previewReadyHint") });
-        showToast(
-          doneCountLocal === 1
-            ? t("previewReadyOne", { name: lastFilename })
-            : t("previewReadyMany", { n: doneCountLocal }),
-          "success",
-        );
-      }
-    } else if (firstError) {
-      setProgress({ visible: true, pct: 100, text: t("failedCount", { n: pending.length - doneCountLocal }) });
-      showToast(firstError, "error");
+          onToast: showToast,
+        },
+        opts,
+        abort.signal,
+      );
+    } finally {
+      convertingRef.current = false;
+      abortRef.current = null;
+      setConverting(false);
     }
   }, [dispatchJob, setStatus, showToast, showXtch]);
 

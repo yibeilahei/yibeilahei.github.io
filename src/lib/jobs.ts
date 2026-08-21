@@ -24,6 +24,13 @@ export type JobState = {
 
 export const initialJobState: JobState = { jobs: [], activeId: null };
 
+export function pendingJobs(jobs: Job[], preview: boolean): Job[] {
+  return jobs.filter((job) => {
+    if (preview) return job.status === "queued" || job.status === "error";
+    return !job.result || job.result.partial || job.status === "error" || job.status === "queued";
+  });
+}
+
 export function axisFromChoice(
   choice: WritingMode,
   sniffedAxis: ResolvedWritingMode | null,
